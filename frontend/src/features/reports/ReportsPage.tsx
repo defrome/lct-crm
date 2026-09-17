@@ -28,6 +28,7 @@ import {
   exportCsv,
   exportJson,
   exportPdf,
+  exportXls,
   exportXlsx,
   type ReportColumn,
 } from '@/lib/exportReport';
@@ -110,7 +111,8 @@ export function ReportsPage() {
   );
 
   const exporting = useMutation({
-    mutationFn: async (format: 'xlsx' | 'pdf' | 'csv' | 'json') => {
+    mutationFn: async (format: 'xls' | 'xlsx' | 'pdf' | 'csv' | 'json') => {
+      if (format === 'xls') return exportXls(payload);
       if (format === 'xlsx') return exportXlsx(payload);
       if (format === 'pdf') return exportPdf(payload);
       if (format === 'csv') return exportCsv(payload);
@@ -167,6 +169,16 @@ export function ReportsPage() {
               onClick={() => exporting.mutate('pdf')}
             >
               PDF
+            </Button>
+            <Button
+              variant="outline"
+              icon="download"
+              className="bg-card"
+              disabled={noRows}
+              loading={exporting.isPending && exporting.variables === 'xls'}
+              onClick={() => exporting.mutate('xls')}
+            >
+              XLS
             </Button>
             <Button
               variant="primary"
@@ -542,11 +554,12 @@ function summarise(rows: InteractionRead[], stages: Map<string, StageInfo>) {
  * свой мягкий тон, чтобы нужный находился глазами, а не чтением.
  */
 const EXPORTS: {
-  format: 'xlsx' | 'pdf' | 'csv' | 'json';
+  format: 'xls' | 'xlsx' | 'pdf' | 'csv' | 'json';
   label: string;
   hint: string;
   glyph: string;
 }[] = [
+  { format: 'xls', label: 'XLS', hint: 'Таблица для совместимости со старым Excel', glyph: 'bg-success-container text-success' },
   { format: 'xlsx', label: 'XLSX', hint: 'Таблица Excel с фильтрами', glyph: 'bg-success-container text-success' },
   { format: 'pdf', label: 'PDF', hint: 'Для печати и согласования', glyph: 'bg-accent-container text-accent' },
   { format: 'csv', label: 'CSV', hint: 'Для Excel на русской локали и 1С', glyph: 'bg-neutral-container text-fg' },

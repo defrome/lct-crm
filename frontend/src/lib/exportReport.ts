@@ -78,6 +78,48 @@ export async function exportXlsx(payload: ReportPayload): Promise<void> {
 }
 
 /**
+ * Export an Excel 2003 XML workbook.  SpreadsheetML is a native legacy Excel
+ * format, so it opens as an `.xls` file without requiring a second, large
+ * spreadsheet writer alongside ExcelJS (which only writes XLSX).
+ */
+export function exportXls(payload: ReportPayload): void {
+  const escapeXml = (value: string) =>
+    value
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&apos;');
+  const cell = (value: string, style?: string) =>
+    `<Cell${style ? ` ss:StyleID="${style}"` : ''}><Data ss:Type="String">${escapeXml(value)}</Data></Cell>`;
+  const mergedCell = (value: string, style: string) =>
+    `<Cell ss:StyleID="${style}" ss:MergeAcross="${Math.max(payload.columns.length - 1, 0)}"><Data ss:Type="String">${escapeXml(value)}</Data></Cell>`;
+
+  const rows = [
+    `<Row>${mergedCell(payload.title, 'title')}</Row>`,
+    ...(payload.subtitle ? [`<Row>${mergedCell(payload.subtitle, 'subtitle')}</Row>`] : []),
+    `<Row>${payload.columns.map((column) => cell(column.title, 'header')).join('')}</Row>`,
+    ...payload.rows.map((row) =>
+      `<Row>${payload.columns.map((column) => cell(row[column.key] ?? '')).join('')}</Row>`,
+    ),
+  ];
+  const columns = payload.columns
+    .map((column) => `<Column ss:Width="${(column.width ?? 24) * 7}"/>`)
+    .join('');
+  const document = `<?xml version="1.0" encoding="UTF-8"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+  <Styles>
+    <Style ss:ID="title"><Font ss:Bold="1" ss:Size="14"/></Style>
+    <Style ss:ID="subtitle"><Font ss:Size="10" ss:Color="#6B6780"/></Style>
+    <Style ss:ID="header"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#7700FF" ss:Pattern="Solid"/></Style>
+  </Styles>
+  <Worksheet ss:Name="Отчёт"><Table>${columns}${rows.join('')}</Table></Worksheet>
+</Workbook>`;
+
+  saveBlob(new Blob([document], { type: 'application/vnd.ms-excel' }), filename(payload, 'xls'));
+}
+
+/**
  * The PDF's font travels with it.
  *
  * The PDF standard's core fonts (Helvetica, Times, Courier) carry no Cyrillic

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 
+import xlrd
+
 from app.schemas.interaction import InteractionCreate
 from app.schemas.university import UniversityCreate
 from app.services.catalogs import UniversityService
@@ -24,6 +26,10 @@ async def test_report_exports_selected_columns_in_all_formats(session, client, m
         assert response.status_code == 200
         assert f"interactions-report.{format_}" in response.headers["content-disposition"]
         assert response.content
+        if format_ == "xls":
+            assert response.headers["content-type"].startswith("application/vnd.ms-excel")
+            workbook = xlrd.open_workbook(file_contents=response.content)
+            assert workbook.sheet_by_index(0).cell_value(0, 0) == "University"
 
     json_response = await client.post(
         "/api/v1/reports/export",
