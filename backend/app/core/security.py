@@ -32,7 +32,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.db import get_session
 from app.core.errors import AccessDeniedError
-from app.models.enums import UserRole
+from app.models.enums import UserRole, UserVisibilityMode
 from app.models.user import User
 from app.services.text import normalize_name
 
@@ -49,6 +49,7 @@ class CurrentUser(BaseModel):
     keycloak_id: str
     full_name: str
     role: Role
+    visibility_mode: UserVisibilityMode = UserVisibilityMode.ASSIGNMENTS
 
     @property
     def is_admin(self) -> bool:
@@ -192,6 +193,7 @@ async def _dev_user(request: Request, session: AsyncSession) -> CurrentUser:
         keycloak_id=user.keycloak_id,
         full_name=user.full_name,
         role=user.role.value,  # type: ignore[arg-type]
+        visibility_mode=user.visibility_mode,
     )
 
 
@@ -226,6 +228,7 @@ async def _keycloak_user(request: Request, session: AsyncSession) -> CurrentUser
         keycloak_id=user.keycloak_id,
         full_name=user.full_name,
         role=user.role.value,  # type: ignore[arg-type]
+        visibility_mode=user.visibility_mode,
     )
 
 

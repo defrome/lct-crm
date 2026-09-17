@@ -13,6 +13,7 @@ export type DateOnly = string;
 export type DateTime = string;
 
 export type UserRole = 'user' | 'manager' | 'admin';
+export type UserVisibilityMode = 'assignments' | 'selected' | 'all';
 
 export interface Page<T> {
   items: T[];
@@ -57,6 +58,7 @@ export interface UserRead extends UserShort {
   keycloak_id: string;
   email: string | null;
   is_active: boolean;
+  visibility_mode: UserVisibilityMode;
   created_at: DateTime;
   updated_at: DateTime;
 }
@@ -67,6 +69,11 @@ export interface UserCreate {
   email?: string | null;
   role?: UserRole;
   is_active?: boolean;
+}
+
+export interface UserVisibilityUpdate {
+  mode: UserVisibilityMode;
+  university_ids: UUID[];
 }
 
 // --- Вузы -------------------------------------------------------------------

@@ -2,15 +2,20 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import uuid
+from collections.abc import Sequence
 
+import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.access import AccessScope
 from app.core.errors import DuplicateEntityError, ValidationError
-from app.models.user import User
+from app.models.enums import UserRole, UserVisibilityMode
+from app.models.university import University
+from app.models.user import User, UserVisibilityUniversity
 from app.repositories.user import UserRepository
-from app.schemas.user import UserCreate
+from app.schemas.user import UserCreate, UserVisibilityUpdate
 from app.services.base import integrity_guard
 from app.services.text import clean_text, normalize_person_name
 
@@ -53,6 +58,78 @@ class UserService:
             await self.session.flush()
             await self.session.commit()
         return user
+
+    async def update_visibility(self, user_id: uuid.UUID, data: UserVisibilityUpdate) -> User:
+        """Replace a KAM's explicit visibility policy atomically.
+
+        `assignments` preserves the default access rule; `selected` replaces it
+        with the administrator's list; `all` is useful for temporarily broad
+        access without changing a manager role.  Role elevation still belongs
+        to Keycloak, which remains the source of truth for roles.
+        """
+        user = await self.get(user_id)
+        if user.role is not UserRole.USER:
+            raise ValidationError(
+                "Ограничения видимости настраиваются только для роли КАМ",
+                details={"user_id": str(user_id), "role": user.role.value},
+            )
+        ids = list(dict.fromkeys(data.university_ids))
+        if data.mode is UserVisibilityMode.SELECTED and not ids:
+            raise ValidationError(
+                "Для режима «Выбранные вузы» укажите хотя бы один вуз",
+                details={"field": "university_ids"},
+            )
+        if ids:
+            found = set(
+                (
+                    await self.session.scalars(
+                        sa.select(University.id).where(
+                            University.id.in_(ids), University.deleted_at.is_(None)
+                        )
+                    )
+                ).all()
+            )
+            missing = [str(item) for item in ids if item not in found]
+            if missing:
+                raise ValidationError("В списке есть несуществующий вуз", details={"ids": missing})
+
+        existing = list(
+            (
+                await self.session.scalars(
+                    sa.select(UserVisibilityUniversity).where(
+                        UserVisibilityUniversity.user_id == user.id
+                    )
+                )
+            ).all()
+        )
+        existing_by_university = {item.university_id: item for item in existing}
+        wanted = set(ids if data.mode is UserVisibilityMode.SELECTED else [])
+        for university_id, item in existing_by_university.items():
+            item.deleted_at = None if university_id in wanted else dt.datetime.now(dt.UTC)
+        self.session.add_all(
+            [
+                UserVisibilityUniversity(user_id=user.id, university_id=university_id)
+                for university_id in wanted - existing_by_university.keys()
+            ]
+        )
+        user.visibility_mode = data.mode
+        await self.session.flush()
+        await self.session.commit()
+        return user
+
+    async def visibility(self, user_id: uuid.UUID) -> tuple[User, Sequence[uuid.UUID]]:
+        user = await self.get(user_id)
+        ids = list(
+            (
+                await self.session.scalars(
+                    sa.select(UserVisibilityUniversity.university_id).where(
+                        UserVisibilityUniversity.user_id == user.id,
+                        UserVisibilityUniversity.deleted_at.is_(None),
+                    )
+                )
+            ).all()
+        )
+        return user, ids
 
     async def match_by_full_name(self, full_name: str) -> User | None:
         """Resolve «ФИО Менеджера» from Excel to an employee.

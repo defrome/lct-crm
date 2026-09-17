@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Literal, Protocol
 
 
 class _UserLike(Protocol):
@@ -17,6 +17,9 @@ class _UserLike(Protocol):
     @property
     def is_privileged(self) -> bool: ...
 
+    @property
+    def visibility_mode(self) -> str: ...
+
 
 @dataclass(frozen=True, slots=True)
 class AccessScope:
@@ -24,10 +27,15 @@ class AccessScope:
 
     user_id: uuid.UUID | None
     is_privileged: bool
+    visibility_mode: Literal["assignments", "selected", "all"] = "assignments"
 
     @classmethod
     def from_user(cls, user: _UserLike) -> AccessScope:
-        return cls(user_id=user.id, is_privileged=user.is_privileged)
+        return cls(
+            user_id=user.id,
+            is_privileged=user.is_privileged,
+            visibility_mode=user.visibility_mode,  # type: ignore[arg-type]
+        )
 
     @classmethod
     def system(cls) -> AccessScope:

@@ -46,6 +46,7 @@ import type {
   UniversityUpdate,
   UserCreate,
   UserRead,
+  UserVisibilityUpdate,
   VendorCreate,
   VendorRead,
   VersionCreate,
@@ -63,6 +64,9 @@ export const usersApi = {
   list: (params?: PageQuery) => api.get<Page<UserRead>>('/users', q(params)),
   get: (id: UUID) => api.get<UserRead>(`/users/${id}`),
   create: (body: UserCreate) => api.post<UserRead>('/users', body),
+  visibility: (id: UUID) => api.get<UserVisibilityUpdate>(`/users/${id}/visibility`),
+  updateVisibility: (id: UUID, body: UserVisibilityUpdate) =>
+    api.patch<UserRead>(`/users/${id}/visibility`, body),
 };
 
 export const universitiesApi = {

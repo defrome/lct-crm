@@ -54,6 +54,196 @@
       "email": "kc-user@crm.local",
       "credentials": [{ "type": "password", "value": "user123", "temporary": false }],
       "realmRoles": ["user"]
+    },
+    {
+      "username": "kc-kam-02",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Анна",
+      "lastName": "Воронова",
+      "email": "kam02@crm.local",
+      "credentials": [{ "type": "password", "value": "kam123", "temporary": true }],
+      "realmRoles": ["user"]
+    },
+    {
+      "username": "kc-kam-03",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Дмитрий",
+      "lastName": "Громов",
+      "email": "kam03@crm.local",
+      "credentials": [{ "type": "password", "value": "kam123", "temporary": true }],
+      "realmRoles": ["user"]
+    },
+    {
+      "username": "kc-kam-04",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Елена",
+      "lastName": "Дроздова",
+      "email": "kam04@crm.local",
+      "credentials": [{ "type": "password", "value": "kam123", "temporary": true }],
+      "realmRoles": ["user"]
+    },
+    {
+      "username": "kc-kam-05",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Илья",
+      "lastName": "Егоров",
+      "email": "kam05@crm.local",
+      "credentials": [{ "type": "password", "value": "kam123", "temporary": true }],
+      "realmRoles": ["user"]
+    },
+    {
+      "username": "kc-kam-06",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Мария",
+      "lastName": "Жукова",
+      "email": "kam06@crm.local",
+      "credentials": [{ "type": "password", "value": "kam123", "temporary": true }],
+      "realmRoles": ["user"]
+    },
+    {
+      "username": "kc-kam-07",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Николай",
+      "lastName": "Зайцев",
+      "email": "kam07@crm.local",
+      "credentials": [{ "type": "password", "value": "kam123", "temporary": true }],
+      "realmRoles": ["user"]
+    },
+    {
+      "username": "kc-kam-08",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Ольга",
+      "lastName": "Иванова",
+      "email": "kam08@crm.local",
+      "credentials": [{ "type": "password", "value": "kam123", "temporary": true }],
+      "realmRoles": ["user"]
+    },
+    {
+      "username": "kc-kam-09",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Павел",
+      "lastName": "Крылов",
+      "email": "kam09@crm.local",
+      "credentials": [{ "type": "password", "value": "kam123", "temporary": true }],
+      "realmRoles": ["user"]
+    },
+    {
+      "username": "kc-kam-10",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Светлана",
+      "lastName": "Лебедева",
+      "email": "kam10@crm.local",
+      "credentials": [{ "type": "password", "value": "kam123", "temporary": true }],
+      "realmRoles": ["user"]
+    },
+    {
+      "username": "kc-kam-11",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Тимофей",
+      "lastName": "Морозов",
+      "email": "kam11@crm.local",
+      "credentials": [{ "type": "password", "value": "kam123", "temporary": true }],
+      "realmRoles": ["user"]
+    },
+    {
+      "username": "kc-kam-12",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Юлия",
+      "lastName": "Никитина",
+      "email": "kam12@crm.local",
+      "credentials": [{ "type": "password", "value": "kam123", "temporary": true }],
+      "realmRoles": ["user"]
+    },
+    {
+      "username": "kc-kam-13",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Артём",
+      "lastName": "Орлов",
+      "email": "kam13@crm.local",
+      "credentials": [{ "type": "password", "value": "kam123", "temporary": true }],
+      "realmRoles": ["user"]
+    },
+    {
+      "username": "kc-kam-14",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Виктория",
+      "lastName": "Петрова",
+      "email": "kam14@crm.local",
+      "credentials": [{ "type": "password", "value": "kam123", "temporary": true }],
+      "realmRoles": ["user"]
+    },
+    {
+      "username": "kc-kam-15",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Георгий",
+      "lastName": "Романов",
+      "email": "kam15@crm.local",
+      "credentials": [{ "type": "password", "value": "kam123", "temporary": true }],
+      "realmRoles": ["user"]
+    },
+    {
+      "username": "kc-kam-16",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Дарья",
+      "lastName": "Соколова",
+      "email": "kam16@crm.local",
+      "credentials": [{ "type": "password", "value": "kam123", "temporary": true }],
+      "realmRoles": ["user"]
+    },
+    {
+      "username": "kc-kam-17",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Кирилл",
+      "lastName": "Тарасов",
+      "email": "kam17@crm.local",
+      "credentials": [{ "type": "password", "value": "kam123", "temporary": true }],
+      "realmRoles": ["user"]
+    },
+    {
+      "username": "kc-kam-18",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Людмила",
+      "lastName": "Фёдорова",
+      "email": "kam18@crm.local",
+      "credentials": [{ "type": "password", "value": "kam123", "temporary": true }],
+      "realmRoles": ["user"]
+    },
+    {
+      "username": "kc-kam-19",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Максим",
+      "lastName": "Харитонов",
+      "email": "kam19@crm.local",
+      "credentials": [{ "type": "password", "value": "kam123", "temporary": true }],
+      "realmRoles": ["user"]
+    },
+    {
+      "username": "kc-kam-20",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Наталья",
+      "lastName": "Чернова",
+      "email": "kam20@crm.local",
+      "credentials": [{ "type": "password", "value": "kam123", "temporary": true }],
+      "realmRoles": ["user"]
     }
   ]
 }

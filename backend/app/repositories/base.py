@@ -19,6 +19,7 @@ from app.core.config import settings
 from app.core.errors import AccessDeniedError, NotFoundError, ValidationError
 from app.models.base import Base
 from app.models.university import UniversityAssignment
+from app.models.user import UserVisibilityUniversity
 
 
 def visible_university_ids(scope: AccessScope) -> Select[tuple[uuid.UUID]]:
@@ -27,6 +28,12 @@ def visible_university_ids(scope: AccessScope) -> Select[tuple[uuid.UUID]]:
     "Currently" means today falls inside `[assigned_from, assigned_to]`, with a
     NULL upper bound meaning "still in effect".
     """
+    if scope.visibility_mode == "selected":
+        return sa.select(UserVisibilityUniversity.university_id).where(
+            UserVisibilityUniversity.user_id == scope.user_id,
+            UserVisibilityUniversity.deleted_at.is_(None),
+        )
+
     today = sa.func.current_date()
     return sa.select(UniversityAssignment.university_id).where(
         UniversityAssignment.user_id == scope.user_id,
@@ -64,7 +71,11 @@ class BaseRepository[ModelT: Base]:
         return stmt
 
     def _access_filter(self, stmt: Select[Any]) -> Select[Any]:
-        if self.scope.is_privileged or self.university_scope_column is None:
+        if (
+            self.scope.is_privileged
+            or self.scope.visibility_mode == "all"
+            or self.university_scope_column is None
+        ):
             return stmt
         column = getattr(self.model, self.university_scope_column)
         return stmt.where(column.in_(visible_university_ids(self.scope)))

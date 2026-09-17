@@ -12,6 +12,7 @@ from app.models.enums import (
     IntegrationSource,
     IntegrationSyncStatus,
     UserRole,
+    UserVisibilityMode,
     WorkflowVersionStatus,
 )
 from app.models.import_job import ImportJob, ImportMappingPreset, ImportRow
@@ -19,7 +20,7 @@ from app.models.integration import IntegrationSyncRun
 from app.models.interaction import Interaction
 from app.models.product import ITDirection, ITProduct, ITProductDirection, Vendor
 from app.models.university import University, UniversityAssignment, UniversityContact
-from app.models.user import User
+from app.models.user import User, UserVisibilityUniversity
 from app.models.workflow import (
     InteractionStageHistory,
     Workflow,
@@ -56,6 +57,8 @@ __all__ = [
     "UniversityContact",
     "User",
     "UserRole",
+    "UserVisibilityMode",
+    "UserVisibilityUniversity",
     "Vendor",
     "Workflow",
     "WorkflowAttachment",

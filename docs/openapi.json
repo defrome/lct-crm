@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "CRM ИТ Школы",
+    "title": "CRM IT School",
     "description": "\nCRM ИТ Школы Ростелекома — ядро данных (SPEC-01).\n\n**Что здесь есть:** справочники (вузы, вендоры, ИТ-направления, ИТ-продукты,\nконтакты вузов), карточки взаимодействий, двухфазный импорт каталогов из Excel\nи журнал аудита.\n\n**Чего здесь нет:** workflow-движок и переходы по этапам (SPEC-02), отчёты\n(SPEC-03), интеграции с LMS и сайтом (SPEC-04). Модель данных под них\nподготовлена.\n\n### Авторизация\n* `AUTH_MODE=dev` — заголовок `X-Debug-User` с UUID, `keycloak_id` или email\n  существующего сотрудника. Запрещён при `ENV=production`.\n* `AUTH_MODE=keycloak` — `Authorization: Bearer <JWT>`, проверка подписи по JWKS.\n\n### Роли\n* `user` — видит только закреплённые за собой вузы и связанные с ними данные;\n* `manager` — видит всё, может создавать и изменять;\n* `admin` — плюс мягкое удаление и доступ к журналу аудита.\n\n### Формат ошибок\nЛюбая ошибка возвращается в едином виде:\n\n```json\n{\"error\": {\"code\": \"NOT_FOUND\", \"message\": \"Объект не найден\",\n           \"details\": {}, \"request_id\": \"0d2f...\"}}\n```\n",
     "version": "0.1.0"
   },
@@ -5479,6 +5479,152 @@
         }
       }
     },
+    "/api/v1/users/{user_id}/visibility": {
+      "get": {
+        "tags": [
+          "Сотрудники"
+        ],
+        "summary": "Настройки видимости КАМа",
+        "description": "Только для роли `admin`: правила UC-A-01 поверх обычного закрепления за вузом.",
+        "operationId": "get_user_visibility_api_v1_users__user_id__visibility_get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserVisibilityUpdate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Доступ запрещён. Коды: ACCESS_DENIED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Объект не найден. Коды: NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Сотрудники"
+        ],
+        "summary": "Настроить видимость данных КАМа",
+        "description": "Только для роли `admin`. Режим `assignments` показывает закреплённые вузы, `selected` — только явно выбранные, `all` — все. Настройка доступна только КАМам; роли по-прежнему назначаются в Keycloak.",
+        "operationId": "update_user_visibility_api_v1_users__user_id__visibility_patch",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserVisibilityUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserRead"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Доступ запрещён. Коды: ACCESS_DENIED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Объект не найден. Коды: NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Конфликт состояния или дубликат. Коды: DUPLICATE_ENTITY",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Ошибка валидации. Коды: VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/imports": {
       "post": {
         "tags": [
@@ -7142,7 +7288,7 @@
         "properties": {
           "file": {
             "type": "string",
-            "contentMediaType": "application/octet-stream",
+            "format": "binary",
             "title": "File",
             "description": "Файл одного из десяти допустимых форматов"
           },
@@ -7169,7 +7315,7 @@
         "properties": {
           "file": {
             "type": "string",
-            "contentMediaType": "application/octet-stream",
+            "format": "binary",
             "title": "File",
             "description": "Файл каталога .xlsx или .xls"
           },
@@ -7428,6 +7574,10 @@
               "admin"
             ],
             "title": "Role"
+          },
+          "visibility_mode": {
+            "$ref": "#/components/schemas/UserVisibilityMode",
+            "default": "assignments"
           }
         },
         "type": "object",
@@ -10717,6 +10867,9 @@
             "type": "boolean",
             "title": "Is Active"
           },
+          "visibility_mode": {
+            "$ref": "#/components/schemas/UserVisibilityMode"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -10735,6 +10888,7 @@
           "full_name",
           "role",
           "is_active",
+          "visibility_mode",
           "created_at",
           "updated_at"
         ],
@@ -10773,6 +10927,37 @@
         "title": "UserShort",
         "description": "Compact form embedded in other responses."
       },
+      "UserVisibilityMode": {
+        "type": "string",
+        "enum": [
+          "assignments",
+          "selected",
+          "all"
+        ],
+        "title": "UserVisibilityMode",
+        "description": "How a KAM's row-level university visibility is calculated (UC-A-01)."
+      },
+      "UserVisibilityUpdate": {
+        "properties": {
+          "mode": {
+            "$ref": "#/components/schemas/UserVisibilityMode"
+          },
+          "university_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "University Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mode"
+        ],
+        "title": "UserVisibilityUpdate",
+        "description": "Administrator-managed data boundary for a KAM (UC-A-01)."
+      },
       "ValidationError": {
         "properties": {
           "loc": {
@@ -10796,13 +10981,6 @@
           "type": {
             "type": "string",
             "title": "Error Type"
-          },
-          "input": {
-            "title": "Input"
-          },
-          "ctx": {
-            "type": "object",
-            "title": "Context"
           }
         },
         "type": "object",
@@ -11153,14 +11331,11 @@
       }
     },
     "securitySchemes": {
-      "KeycloakOAuth2": {
-        "type": "oauth2",
-        "flows": {
-          "password": {
-            "tokenUrl": "http://localhost:8080/realms/crm/protocol/openid-connect/token",
-            "scopes": {}
-          }
-        }
+      "DebugUser": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Debug-User",
+        "description": "UUID, keycloak_id или email существующего сотрудника"
       }
     }
   },
@@ -11228,7 +11403,7 @@
   ],
   "security": [
     {
-      "KeycloakOAuth2": []
+      "DebugUser": []
     }
   ]
 }

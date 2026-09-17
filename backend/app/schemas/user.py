@@ -7,7 +7,7 @@ import uuid
 
 from pydantic import Field
 
-from app.models.enums import UserRole
+from app.models.enums import UserRole, UserVisibilityMode
 from app.schemas.common import ORMModel
 
 
@@ -18,6 +18,7 @@ class UserRead(ORMModel):
     email: str | None = None
     role: UserRole
     is_active: bool
+    visibility_mode: UserVisibilityMode
     created_at: dt.datetime
     updated_at: dt.datetime
 
@@ -36,3 +37,10 @@ class UserCreate(ORMModel):
     email: str | None = Field(default=None, max_length=320)
     role: UserRole = UserRole.USER
     is_active: bool = True
+
+
+class UserVisibilityUpdate(ORMModel):
+    """Administrator-managed data boundary for a KAM (UC-A-01)."""
+
+    mode: UserVisibilityMode
+    university_ids: list[uuid.UUID] = Field(default_factory=list)

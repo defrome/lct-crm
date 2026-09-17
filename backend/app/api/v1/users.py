@@ -18,7 +18,7 @@ from app.api.v1.deps import (
 )
 from app.core.security import CurrentUser, require_admin
 from app.schemas.common import Page
-from app.schemas.user import UserCreate, UserRead
+from app.schemas.user import UserCreate, UserRead, UserVisibilityUpdate
 from app.services.users import UserService
 
 router = APIRouter(prefix="/users", tags=["Сотрудники"])
@@ -92,3 +92,42 @@ async def create_user(
     _: CurrentUser = Depends(require_admin),
 ) -> UserRead:
     return UserRead.model_validate(await UserService(session, scope).create(data))
+
+
+@router.get(
+    "/{user_id}/visibility",
+    response_model=UserVisibilityUpdate,
+    summary="Настройки видимости КАМа",
+    description="Только для роли `admin`: правила UC-A-01 поверх обычного закрепления за вузом.",
+    responses=READ_ERRORS,
+)
+async def get_user_visibility(
+    user_id: uuid.UUID,
+    session: SessionDep,
+    scope: ScopeDep,
+    _: CurrentUser = Depends(require_admin),
+) -> UserVisibilityUpdate:
+    user, ids = await UserService(session, scope).visibility(user_id)
+    return UserVisibilityUpdate(mode=user.visibility_mode, university_ids=list(ids))
+
+
+@router.patch(
+    "/{user_id}/visibility",
+    response_model=UserRead,
+    summary="Настроить видимость данных КАМа",
+    description=(
+        "Только для роли `admin`. Режим `assignments` показывает закреплённые вузы, "
+        "`selected` — только явно выбранные, `all` — все. Настройка доступна только КАМам; "
+        "роли по-прежнему назначаются в Keycloak."
+    ),
+    responses=CATALOG_ERRORS,
+)
+async def update_user_visibility(
+    user_id: uuid.UUID,
+    data: UserVisibilityUpdate,
+    session: SessionDep,
+    scope: ScopeDep,
+    _: CurrentUser = Depends(require_admin),
+) -> UserRead:
+    user = await UserService(session, scope).update_visibility(user_id, data)
+    return UserRead.model_validate(user)

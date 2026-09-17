@@ -11,6 +11,14 @@ class UserRole(StrEnum):
     ADMIN = "admin"
 
 
+class UserVisibilityMode(StrEnum):
+    """How a KAM's row-level university visibility is calculated (UC-A-01)."""
+
+    ASSIGNMENTS = "assignments"
+    SELECTED = "selected"
+    ALL = "all"
+
+
 class ImportTarget(StrEnum):
     UNIVERSITIES = "universities"
     IT_PRODUCTS = "it_products"
@@ -98,6 +106,7 @@ class AuditAction(StrEnum):
 # Names of the PostgreSQL enum types. Kept in one place so models and Alembic
 # migrations cannot drift apart.
 USER_ROLE_ENUM = "user_role"
+USER_VISIBILITY_MODE_ENUM = "user_visibility_mode"
 IMPORT_TARGET_ENUM = "import_target"
 IMPORT_JOB_STATUS_ENUM = "import_job_status"
 IMPORT_ROW_STATUS_ENUM = "import_row_status"
