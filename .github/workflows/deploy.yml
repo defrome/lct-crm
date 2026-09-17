@@ -328,5 +328,12 @@ jobs:
             exit 1
           fi
 
+          # Reclaim disk space from previous releases only after the new
+          # application stack is healthy. --all also removes unused tagged
+          # SHA images and build cache. Volumes are deliberately preserved:
+          # they contain application data, TLS certificates and monitoring
+          # history.
+          docker system prune --all --force
+
           docker compose -f docker-compose.deploy.yml ps
           REMOTE
