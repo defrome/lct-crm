@@ -1,4 +1,4 @@
-"""Seed demo data: three users (one per role), catalogs and a few interactions.
+"""Seed demo data: Keycloak users, catalogs and a few interactions.
 
 Idempotent — run it as many times as you like, it will not create duplicates.
 
@@ -16,6 +16,7 @@ from app.core.audit import AuditContext, audit_context, register_audit_listeners
 from app.core.db import SessionFactory, dispose_engine
 from app.core.logging import configure_logging
 from app.models.enums import UserRole
+from app.models.user import User
 from app.schemas.university import AssignmentCreate
 from app.schemas.user import UserCreate
 from app.services.assignments import AssignmentService
@@ -33,9 +34,38 @@ from app.services.workflow_presets import ensure_base_workflow
 logger = logging.getLogger("seed")
 
 DEMO_USERS = [
-    ("seed-admin", "Администратор Системный Иванович", "admin@it-school.example", UserRole.ADMIN),
-    ("seed-manager", "Менеджерова Ольга Сергеевна", "manager@it-school.example", UserRole.MANAGER),
-    ("seed-user", "Камов Кирилл Андреевич", "kam@it-school.example", UserRole.USER),
+    (
+        "10000000-0000-4000-8000-000000000001",
+        "Тестовый Админ",
+        "kc-admin@crm.local",
+        UserRole.ADMIN,
+    ),
+    (
+        "20000000-0000-4000-8000-000000000001",
+        "Тестовый Менеджер",
+        "kc-manager@crm.local",
+        UserRole.MANAGER,
+    ),
+    ("30000000-0000-4000-8000-000000000001", "Кирилл Камов", "kc-user@crm.local", UserRole.USER),
+    ("30000000-0000-4000-8000-000000000002", "Анна Воронова", "kam02@crm.local", UserRole.USER),
+    ("30000000-0000-4000-8000-000000000003", "Дмитрий Громов", "kam03@crm.local", UserRole.USER),
+    ("30000000-0000-4000-8000-000000000004", "Елена Дроздова", "kam04@crm.local", UserRole.USER),
+    ("30000000-0000-4000-8000-000000000005", "Илья Егоров", "kam05@crm.local", UserRole.USER),
+    ("30000000-0000-4000-8000-000000000006", "Мария Жукова", "kam06@crm.local", UserRole.USER),
+    ("30000000-0000-4000-8000-000000000007", "Николай Зайцев", "kam07@crm.local", UserRole.USER),
+    ("30000000-0000-4000-8000-000000000008", "Ольга Иванова", "kam08@crm.local", UserRole.USER),
+    ("30000000-0000-4000-8000-000000000009", "Павел Крылов", "kam09@crm.local", UserRole.USER),
+    ("30000000-0000-4000-8000-000000000010", "Светлана Лебедева", "kam10@crm.local", UserRole.USER),
+    ("30000000-0000-4000-8000-000000000011", "Тимофей Морозов", "kam11@crm.local", UserRole.USER),
+    ("30000000-0000-4000-8000-000000000012", "Юлия Никитина", "kam12@crm.local", UserRole.USER),
+    ("30000000-0000-4000-8000-000000000013", "Артём Орлов", "kam13@crm.local", UserRole.USER),
+    ("30000000-0000-4000-8000-000000000014", "Виктория Петрова", "kam14@crm.local", UserRole.USER),
+    ("30000000-0000-4000-8000-000000000015", "Георгий Романов", "kam15@crm.local", UserRole.USER),
+    ("30000000-0000-4000-8000-000000000016", "Дарья Соколова", "kam16@crm.local", UserRole.USER),
+    ("30000000-0000-4000-8000-000000000017", "Кирилл Тарасов", "kam17@crm.local", UserRole.USER),
+    ("30000000-0000-4000-8000-000000000018", "Людмила Фёдорова", "kam18@crm.local", UserRole.USER),
+    ("30000000-0000-4000-8000-000000000019", "Максим Харитонов", "kam19@crm.local", UserRole.USER),
+    ("30000000-0000-4000-8000-000000000020", "Наталья Чернова", "kam20@crm.local", UserRole.USER),
 ]
 
 DEMO_DIRECTIONS = [
@@ -93,7 +123,7 @@ async def seed() -> None:
 
     async with SessionFactory() as session:
         users = UserService(session, scope)
-        created_users = {}
+        created_users: dict[UserRole, User] = {}
         for keycloak_id, full_name, email, role in DEMO_USERS:
             existing = await users.repo.find_by_keycloak_id(keycloak_id)
             if existing is None:
@@ -101,7 +131,9 @@ async def seed() -> None:
                     UserCreate(keycloak_id=keycloak_id, full_name=full_name, email=email, role=role)
                 )
                 logger.info("created user %s (%s)", full_name, role.value)
-            created_users[role] = existing
+            # The interaction demo belongs to the first KAM. Other role keys
+            # are unique, so do not overwrite the role lookup for KAMs 2..20.
+            created_users.setdefault(role, existing)
 
         # Everything below is attributed to the seeded admin, so the audit log
         # of a fresh database is not full of anonymous system actions.

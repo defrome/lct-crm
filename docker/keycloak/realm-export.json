@@ -26,6 +26,7 @@
   ],
   "users": [
     {
+      "id": "10000000-0000-4000-8000-000000000001",
       "username": "kc-admin",
       "enabled": true,
       "emailVerified": true,
@@ -36,6 +37,7 @@
       "realmRoles": ["admin"]
     },
     {
+      "id": "20000000-0000-4000-8000-000000000001",
       "username": "kc-manager",
       "enabled": true,
       "emailVerified": true,
@@ -46,16 +48,18 @@
       "realmRoles": ["manager"]
     },
     {
+      "id": "30000000-0000-4000-8000-000000000001",
       "username": "kc-user",
       "enabled": true,
       "emailVerified": true,
-      "firstName": "Тестовый",
-      "lastName": "Пользователь",
+      "firstName": "Кирилл",
+      "lastName": "Камов",
       "email": "kc-user@crm.local",
       "credentials": [{ "type": "password", "value": "user123", "temporary": false }],
       "realmRoles": ["user"]
     },
     {
+      "id": "30000000-0000-4000-8000-000000000002",
       "username": "kc-kam-02",
       "enabled": true,
       "emailVerified": true,
@@ -66,6 +70,7 @@
       "realmRoles": ["user"]
     },
     {
+      "id": "30000000-0000-4000-8000-000000000003",
       "username": "kc-kam-03",
       "enabled": true,
       "emailVerified": true,
@@ -76,6 +81,7 @@
       "realmRoles": ["user"]
     },
     {
+      "id": "30000000-0000-4000-8000-000000000004",
       "username": "kc-kam-04",
       "enabled": true,
       "emailVerified": true,
@@ -86,6 +92,7 @@
       "realmRoles": ["user"]
     },
     {
+      "id": "30000000-0000-4000-8000-000000000005",
       "username": "kc-kam-05",
       "enabled": true,
       "emailVerified": true,
@@ -96,6 +103,7 @@
       "realmRoles": ["user"]
     },
     {
+      "id": "30000000-0000-4000-8000-000000000006",
       "username": "kc-kam-06",
       "enabled": true,
       "emailVerified": true,
@@ -106,6 +114,7 @@
       "realmRoles": ["user"]
     },
     {
+      "id": "30000000-0000-4000-8000-000000000007",
       "username": "kc-kam-07",
       "enabled": true,
       "emailVerified": true,
@@ -116,6 +125,7 @@
       "realmRoles": ["user"]
     },
     {
+      "id": "30000000-0000-4000-8000-000000000008",
       "username": "kc-kam-08",
       "enabled": true,
       "emailVerified": true,
@@ -126,6 +136,7 @@
       "realmRoles": ["user"]
     },
     {
+      "id": "30000000-0000-4000-8000-000000000009",
       "username": "kc-kam-09",
       "enabled": true,
       "emailVerified": true,
@@ -136,6 +147,7 @@
       "realmRoles": ["user"]
     },
     {
+      "id": "30000000-0000-4000-8000-000000000010",
       "username": "kc-kam-10",
       "enabled": true,
       "emailVerified": true,
@@ -146,6 +158,7 @@
       "realmRoles": ["user"]
     },
     {
+      "id": "30000000-0000-4000-8000-000000000011",
       "username": "kc-kam-11",
       "enabled": true,
       "emailVerified": true,
@@ -156,6 +169,7 @@
       "realmRoles": ["user"]
     },
     {
+      "id": "30000000-0000-4000-8000-000000000012",
       "username": "kc-kam-12",
       "enabled": true,
       "emailVerified": true,
@@ -166,6 +180,7 @@
       "realmRoles": ["user"]
     },
     {
+      "id": "30000000-0000-4000-8000-000000000013",
       "username": "kc-kam-13",
       "enabled": true,
       "emailVerified": true,
@@ -176,6 +191,7 @@
       "realmRoles": ["user"]
     },
     {
+      "id": "30000000-0000-4000-8000-000000000014",
       "username": "kc-kam-14",
       "enabled": true,
       "emailVerified": true,
@@ -186,6 +202,7 @@
       "realmRoles": ["user"]
     },
     {
+      "id": "30000000-0000-4000-8000-000000000015",
       "username": "kc-kam-15",
       "enabled": true,
       "emailVerified": true,
@@ -196,6 +213,7 @@
       "realmRoles": ["user"]
     },
     {
+      "id": "30000000-0000-4000-8000-000000000016",
       "username": "kc-kam-16",
       "enabled": true,
       "emailVerified": true,
@@ -206,6 +224,7 @@
       "realmRoles": ["user"]
     },
     {
+      "id": "30000000-0000-4000-8000-000000000017",
       "username": "kc-kam-17",
       "enabled": true,
       "emailVerified": true,
@@ -216,6 +235,7 @@
       "realmRoles": ["user"]
     },
     {
+      "id": "30000000-0000-4000-8000-000000000018",
       "username": "kc-kam-18",
       "enabled": true,
       "emailVerified": true,
@@ -226,6 +246,7 @@
       "realmRoles": ["user"]
     },
     {
+      "id": "30000000-0000-4000-8000-000000000019",
       "username": "kc-kam-19",
       "enabled": true,
       "emailVerified": true,
@@ -236,6 +257,7 @@
       "realmRoles": ["user"]
     },
     {
+      "id": "30000000-0000-4000-8000-000000000020",
       "username": "kc-kam-20",
       "enabled": true,
       "emailVerified": true,
