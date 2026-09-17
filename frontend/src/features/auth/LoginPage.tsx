@@ -46,20 +46,8 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-dvh bg-page p-2 sm:p-4 lg:p-6">
-      {/*
-       * Сцена: мягкое свечение glow-a / glow-b вокруг рамки. Вход — момент бренда,
-       * а не рабочий экран, поэтому свечение живёт только здесь.
-       */}
-      <div
-        className="flex min-h-[calc(100dvh-1rem)] min-w-0 rounded-[calc(var(--crm-radius-frame)+16px)] p-2 sm:min-h-[calc(100dvh-2rem)] sm:p-[clamp(10px,3vw,48px)] lg:min-h-[calc(100dvh-3rem)]"
-        style={{
-          background:
-            'radial-gradient(60% 80% at 0% 0%, var(--crm-glow-a), transparent 70%), radial-gradient(60% 90% at 100% 100%, var(--crm-glow-b), transparent 70%), color-mix(in srgb, var(--crm-glow-a) 50%, var(--crm-glow-b))',
-        }}
-      >
-        <div className="grid min-w-0 w-full gap-4 rounded-xl bg-frame p-4 shadow-bottom-xl sm:rounded-frame sm:p-[clamp(16px,2.2vw,32px)] lg:grid-cols-[1.15fr_1fr] lg:gap-8">
-          <section className="flex flex-col">
+    <main className="grid min-h-dvh min-w-0 grid-rows-[auto_1fr] bg-frame lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:grid-rows-none">
+          <section className="flex min-w-0 flex-col px-5 pt-[max(2rem,env(safe-area-inset-top))] sm:px-10 lg:px-12 lg:py-12 xl:px-16">
             <div className="flex items-center gap-3">
               <BrandMark />
               <span className="leading-tight">
@@ -68,15 +56,15 @@ export function LoginPage() {
               </span>
             </div>
 
-            <h1 className="page-title mt-8 max-w-[16ch] lg:mt-16">
+            <h1 className="page-title mt-16 hidden max-w-[16ch] lg:block">
               Путь вуза от первого контакта до занятий
             </h1>
-            <p className="mt-4 max-w-[48ch] text-body-l text-fg-muted">
+            <p className="mt-4 hidden max-w-[48ch] text-body-l text-fg-muted lg:block">
               Вузы, ИТ-продукты, договоры и лицензии — в одном месте. Каждая карточка идёт по
               маршруту из 14 шагов, с историей и файлами на каждом.
             </p>
 
-            <div className="card card-pad mt-8 hidden lg:mt-auto lg:block">
+            <div className="mt-12 hidden border-t border-line-soft pt-6 lg:mt-auto lg:block">
               <div className="flex items-baseline justify-between gap-3">
                 <h2 className="card-title">Базовый процесс</h2>
                 <span className="text-body-s text-fg-muted">WF-BASE · 14 шагов</span>
@@ -98,7 +86,7 @@ export function LoginPage() {
             </div>
           </section>
 
-          <section className="card flex min-w-0 items-center justify-center rounded-xl p-5 sm:rounded-card sm:p-10">
+          <section className="flex min-w-0 items-start justify-center px-5 pt-12 pb-[max(2rem,env(safe-area-inset-bottom))] sm:px-10 lg:items-center lg:border-l lg:border-line-soft lg:bg-card lg:px-12 lg:py-12 xl:px-16">
             <div className="animate-rise w-full max-w-[24rem]">
               <h2 className="text-h1 font-bold text-fg">Вход в систему</h2>
               <p className="mt-2 text-body-m text-fg-muted">
@@ -143,8 +131,6 @@ export function LoginPage() {
               </p>
             </div>
           </section>
-        </div>
-      </div>
-    </div>
+    </main>
   );
 }
