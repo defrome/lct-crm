@@ -63,7 +63,7 @@ export function UsersPage() {
     },
     {
       key: 'settings',
-      header: '',
+      header: 'Управление доступом',
       align: 'right',
       render: (row) =>
         can('admin') && row.role === 'user' ? (
