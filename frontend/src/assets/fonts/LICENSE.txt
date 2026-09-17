@@ -1,0 +1,7 @@
+Roboto — Copyright 2011 Google Inc. All Rights Reserved.
+Licensed under the Apache License, Version 2.0.
+https://www.apache.org/licenses/LICENSE-2.0
+
+Bundled because PDF exports must render Cyrillic: the PDF standard core fonts
+(Helvetica, Times, Courier) have no Cyrillic glyphs, so a font has to travel
+with the document. Only the two weights the report uses are included.

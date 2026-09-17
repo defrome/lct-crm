@@ -1,0 +1,682 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/onest/index.css';
+
+/*
+ * Дизайн-система CRM на базе «Атомаро» (Rostelecom, 2-е поколение).
+ *
+ * Слой 1 — токены «Атомаро» один в один с @atomaro/themes
+ * (rostelecom-default-light.css / rostelecom-default-dark.css). Когда пакет
+ * темы будет подключён напрямую, этот слой удаляется целиком — всё, что ниже,
+ * продолжит работать, потому что ссылается только на имена токенов.
+ *
+ * Слой 2 — расширение CRM (--crm-*): только то, чего в «Атомаро» нет — рамка
+ * приложения, карточка метрики, цвета графиков. Все значения — ссылки на слой 1.
+ *
+ * Шрифт Rostelecom Basis подключается из пакета системы; до этого его заменяет
+ * Onest с похожей геометрией, как и в описании системы.
+ */
+
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/* =====================================================================
+   СЛОЙ 1. ТОКЕНЫ «АТОМАРО» — Rostelecom Light Theme
+   ===================================================================== */
+:root {
+  /* base */
+  --atmr-base-neutral: #585d69;
+  --atmr-base-accent: #ff4f12;
+  --atmr-base-success: #00ac43;
+  --atmr-base-warning: #fda610;
+  --atmr-base-error: #ff2626;
+  --atmr-base-info: #1f69ff;
+  --atmr-base-status-01: #7700ff;
+  --atmr-base-status-02: #4055e8;
+  --atmr-base-status-03: #038fde;
+  --atmr-base-status-04: #1898a9;
+  --atmr-base-status-05: #ca20d9;
+  --atmr-base-status-06: #d9206f;
+
+  /* neutral */
+  --atmr-neutral-0: #fff;
+  --atmr-neutral-10: #f9f9fa;
+  --atmr-neutral-25: #f4f4f5;
+  --atmr-neutral-50: #e8e8ee;
+  --atmr-neutral-100: #d3d4db;
+  --atmr-neutral-200: #b5b7c0;
+  --atmr-neutral-300: #9da1ac;
+  --atmr-neutral-400: #797e8b;
+  --atmr-neutral-500: var(--atmr-base-neutral);
+  --atmr-neutral-600: #434b5a;
+  --atmr-neutral-700: #323a49;
+  --atmr-neutral-800: #262e3d;
+  --atmr-neutral-900: #212938;
+  --atmr-neutral-925: #1b2332;
+  --atmr-neutral-950: #151d2c;
+  --atmr-neutral-990: #101828;
+
+  /* accent */
+  --atmr-accent-10: #fffaf8;
+  --atmr-accent-25: #fff6f3;
+  --atmr-accent-50: #ffede7;
+  --atmr-accent-100: #ffd3c4;
+  --atmr-accent-200: #ffa789;
+  --atmr-accent-300: #ff8d65;
+  --atmr-accent-400: #ff7241;
+  --atmr-accent-500: var(--atmr-base-accent);
+  --atmr-accent-600: #d9430f;
+  --atmr-accent-700: #b3370d;
+
+  /* status-01 (фиолетовый) */
+  --atmr-status-01-25: #f8f2ff;
+  --atmr-status-01-50: #f1e6ff;
+  --atmr-status-01-100: #ddbfff;
+  --atmr-status-01-200: #bb80ff;
+  --atmr-status-01-300: #a759ff;
+  --atmr-status-01-400: #9233ff;
+  --atmr-status-02-200: #a0aaf3;
+  --atmr-status-03-200: #81c7ef;
+  --atmr-success-50: #e6f7ec;
+  --atmr-warning-50: #fff6e7;
+  --atmr-error-50: #ffe9e9;
+  --atmr-info-50: #e9f0ff;
+
+  /* семантика */
+  --atmr-fg-default: var(--atmr-neutral-990);
+  --atmr-fg-soft: rgba(16, 24, 40, 0.75);
+  --atmr-fg-muted: rgba(16, 24, 40, 0.55);
+  --atmr-fg-disabled: rgba(16, 24, 40, 0.35);
+  --atmr-bg-page: var(--atmr-neutral-0);
+  --atmr-bg-page-filled: var(--atmr-neutral-25);
+  --atmr-bg-surface1: var(--atmr-neutral-0);
+  --atmr-bg-surface2: var(--atmr-neutral-10);
+  --atmr-bg-surface3: var(--atmr-neutral-25);
+  --atmr-bg-surface4: var(--atmr-neutral-50);
+  --atmr-bg-elevated-m: var(--atmr-neutral-0);
+  --atmr-bg-disabled: rgba(88, 93, 105, 0.1);
+  --atmr-border-default: rgba(88, 93, 105, 0.5);
+  --atmr-border-soft: rgba(88, 93, 105, 0.25);
+  --atmr-border-muted: rgba(88, 93, 105, 0.15);
+
+  --atmr-accent-default: var(--atmr-accent-500);
+  --atmr-accent-soft: var(--atmr-accent-400);
+  --atmr-accent-muted: var(--atmr-accent-200);
+  --atmr-accent-hover: var(--atmr-accent-600);
+  --atmr-accent-active: var(--atmr-accent-700);
+  --atmr-accent-on-accent: #fff;
+  --atmr-accent-container-default: rgba(255, 79, 18, 0.1);
+  --atmr-accent-container-hover: rgba(255, 79, 18, 0.2);
+  --atmr-accent-container-active: rgba(255, 79, 18, 0.3);
+
+  --atmr-neutral-default: var(--atmr-neutral-500);
+  --atmr-neutral-hover: var(--atmr-neutral-600);
+  --atmr-neutral-active: var(--atmr-neutral-700);
+  --atmr-neutral-on-neutral: #fff;
+  --atmr-neutral-container-default: rgba(88, 93, 105, 0.1);
+  --atmr-neutral-container-hover: rgba(88, 93, 105, 0.2);
+  --atmr-neutral-container-active: rgba(88, 93, 105, 0.3);
+
+  --atmr-success-default: var(--atmr-base-success);
+  --atmr-success-container-default: rgba(0, 172, 67, 0.1);
+  --atmr-warning-default: var(--atmr-base-warning);
+  --atmr-error-default: var(--atmr-base-error);
+  --atmr-error-container-default: rgba(255, 38, 38, 0.1);
+  --atmr-info-default: var(--atmr-base-info);
+  --atmr-status-01-container-default: rgba(119, 0, 255, 0.1);
+  --atmr-status-02-container-default: rgba(64, 85, 232, 0.1);
+
+  /* шрифт */
+  --atmr-font-family-base: 'Rostelecom Basis', 'Onest Variable', 'Onest', system-ui, -apple-system,
+    'Segoe UI', Arial, sans-serif;
+  --atmr-font-weight-bold: 700;
+  --atmr-font-weight-semibold: 500;
+  --atmr-font-weight-regular: 400;
+
+  /* отступы */
+  --atmr-spacing-0-5x: 2px;
+  --atmr-spacing-1x: 4px;
+  --atmr-spacing-1-5x: 6px;
+  --atmr-spacing-2x: 8px;
+  --atmr-spacing-3x: 12px;
+  --atmr-spacing-4x: 16px;
+  --atmr-spacing-5x: 20px;
+  --atmr-spacing-6x: 24px;
+  --atmr-spacing-8x: 32px;
+  --atmr-spacing-10x: 40px;
+  --atmr-spacing-12x: 48px;
+  --atmr-spacing-16x: 64px;
+
+  /* размеры */
+  --atmr-size-xl: 56px;
+  --atmr-size-l: 48px;
+  --atmr-size-m-chip: 40px;
+  --atmr-size-m: 36px;
+  --atmr-size-s-chip: 32px;
+  --atmr-size-m-tag: 28px;
+  --atmr-size-s: 24px;
+  --atmr-size-xs: 20px;
+
+  /* скругления */
+  --atmr-border-radius-xs: 4px;
+  --atmr-border-radius-s: 6px;
+  --atmr-border-radius-m: 8px;
+  --atmr-border-radius-l: 12px;
+  --atmr-border-radius-xl: 16px;
+  --atmr-border-radius-2xl: 32px;
+  --atmr-border-radius-full: 9999px;
+  --atmr-border-radius-buttons: var(--atmr-border-radius-m);
+  --atmr-border-radius-inputs: var(--atmr-border-radius-m);
+
+  /* тени */
+  --atmr-shadow-bottom-s: 0 0 8px 0 rgba(88, 93, 105, 0.1), 0 2px 4px 0 rgba(88, 93, 105, 0.05);
+  --atmr-shadow-bottom-m: 0 0 16px 0 rgba(88, 93, 105, 0.1), 0 4px 8px 0 rgba(88, 93, 105, 0.05);
+  --atmr-shadow-bottom-l: 0 0 20px 0 rgba(88, 93, 105, 0.1), 0 12px 20px 0 rgba(88, 93, 105, 0.05);
+  --atmr-shadow-bottom-xl: 0 0 32px 0 rgba(88, 93, 105, 0.1), 0 32px 32px 0 rgba(88, 93, 105, 0.05);
+  --atmr-shadow-bottom-controls: 0 0 1px 0 rgba(88, 93, 105, 0.1), 0 2px 2px 0 rgba(88, 93, 105, 0.2);
+
+  /* движение */
+  --atmr-motion-duration-2xs: 100ms;
+  --atmr-motion-duration-xs: 150ms;
+  --atmr-motion-duration-s: 200ms;
+  --atmr-motion-duration-m: 300ms;
+  --atmr-motion-duration-l: 600ms;
+  --atmr-motion-duration-xl: 1200ms;
+  --atmr-motion-easing-productive-standard: cubic-bezier(0.4, 0, 0.6, 1);
+  --atmr-motion-easing-productive-entrance: cubic-bezier(0, 0, 0.6, 1);
+  --atmr-motion-easing-productive-exit: cubic-bezier(0.3, 0, 1, 0.9);
+  --atmr-motion-easing-productive-bouncing: cubic-bezier(0.18, 0.89, 0.35, 1.15);
+  --atmr-motion-easing-expressive-standard: cubic-bezier(0.8, 0, 0.2, 1);
+  --atmr-motion-easing-expressive-entrance: cubic-bezier(0, 0, 0.3, 1);
+  --atmr-motion-easing-expressive-exit: cubic-bezier(0.8, 0.15, 1, 1);
+
+  --atmr-z-index-dropdown: 1000;
+  --atmr-z-index-sticky: 1100;
+  --atmr-z-index-toast: 1600;
+
+  /* =====================================================================
+     СЛОЙ 2. РАСШИРЕНИЕ CRM — только ссылки на токены «Атомаро»
+     ===================================================================== */
+  --crm-page: var(--atmr-neutral-50);
+  --crm-frame: var(--atmr-bg-page-filled);
+  --crm-card: var(--atmr-bg-surface1);
+  --crm-radius-frame: 44px;
+  --crm-radius-card: var(--atmr-border-radius-2xl);
+  --crm-radius-block: var(--atmr-border-radius-l);
+  --crm-chart-now: var(--atmr-accent-200);
+  --crm-chart-past: var(--atmr-status-01-200);
+  --crm-chart-line: var(--atmr-fg-default);
+  --crm-panel: var(--atmr-status-01-100);
+  --crm-glow-a: var(--atmr-status-01-100);
+  --crm-glow-b: var(--atmr-accent-100);
+
+  /*
+   * Нужны интерфейсу CRM, в витрине системы не описаны. Собраны из тех же
+   * ступеней: инверсная плашка (выбранный пункт верхнего меню, подсказка,
+   * счётчик в стопке аватаров), контейнеры предупреждения и справки, затемнение
+   * под модальным окном.
+   */
+  --crm-inverse: var(--atmr-neutral-990);
+  --crm-on-inverse: #fff;
+  --crm-warning-container: var(--atmr-warning-50);
+  --crm-info-container: var(--atmr-info-50);
+  --crm-overlay: rgba(16, 24, 40, 0.4);
+
+  color-scheme: light;
+}
+
+/* Rostelecom Dark Theme — значения из rostelecom-default-dark.css */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --atmr-fg-default: var(--atmr-neutral-50);
+    --atmr-fg-soft: rgba(232, 232, 238, 0.8);
+    --atmr-fg-muted: var(--atmr-neutral-300);
+    --atmr-fg-disabled: rgba(232, 232, 238, 0.35);
+    --atmr-bg-page: var(--atmr-neutral-950);
+    --atmr-bg-page-filled: var(--atmr-neutral-950);
+    --atmr-bg-surface1: var(--atmr-neutral-925);
+    --atmr-bg-surface2: var(--atmr-neutral-900);
+    --atmr-bg-surface3: var(--atmr-neutral-800);
+    --atmr-bg-surface4: var(--atmr-neutral-700);
+    --atmr-bg-elevated-m: var(--atmr-neutral-900);
+    --atmr-border-soft: rgba(181, 183, 192, 0.25);
+    --atmr-border-muted: rgba(181, 183, 192, 0.15);
+    --atmr-accent-container-default: rgba(255, 114, 65, 0.2);
+    --atmr-accent-container-hover: rgba(255, 114, 65, 0.3);
+    --atmr-neutral-container-default: rgba(121, 126, 139, 0.2);
+    --atmr-neutral-container-hover: rgba(121, 126, 139, 0.3);
+    --atmr-neutral-container-active: rgba(121, 126, 139, 0.4);
+    --atmr-status-01-container-default: rgba(146, 51, 255, 0.22);
+    --atmr-status-02-container-default: rgba(92, 110, 240, 0.24);
+    --atmr-success-container-default: rgba(0, 172, 67, 0.2);
+    --crm-page: #0f1522;
+    --crm-chart-now: var(--atmr-accent-300);
+    --crm-chart-past: var(--atmr-status-01-300);
+    --crm-panel: #34245a;
+    --crm-glow-a: #3b2470;
+    --crm-glow-b: #6a2a14;
+    --crm-inverse: var(--atmr-neutral-50);
+    --crm-on-inverse: var(--atmr-neutral-990);
+    --crm-warning-container: rgba(253, 166, 16, 0.18);
+    --crm-info-container: rgba(31, 105, 255, 0.2);
+    --crm-overlay: rgba(5, 8, 16, 0.6);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --atmr-fg-default: var(--atmr-neutral-50);
+  --atmr-fg-soft: rgba(232, 232, 238, 0.8);
+  --atmr-fg-muted: var(--atmr-neutral-300);
+  --atmr-fg-disabled: rgba(232, 232, 238, 0.35);
+  --atmr-bg-page: var(--atmr-neutral-950);
+  --atmr-bg-page-filled: var(--atmr-neutral-950);
+  --atmr-bg-surface1: var(--atmr-neutral-925);
+  --atmr-bg-surface2: var(--atmr-neutral-900);
+  --atmr-bg-surface3: var(--atmr-neutral-800);
+  --atmr-bg-surface4: var(--atmr-neutral-700);
+  --atmr-bg-elevated-m: var(--atmr-neutral-900);
+  --atmr-border-soft: rgba(181, 183, 192, 0.25);
+  --atmr-border-muted: rgba(181, 183, 192, 0.15);
+  --atmr-accent-container-default: rgba(255, 114, 65, 0.2);
+  --atmr-accent-container-hover: rgba(255, 114, 65, 0.3);
+  --atmr-neutral-container-default: rgba(121, 126, 139, 0.2);
+  --atmr-neutral-container-hover: rgba(121, 126, 139, 0.3);
+  --atmr-neutral-container-active: rgba(121, 126, 139, 0.4);
+  --atmr-status-01-container-default: rgba(146, 51, 255, 0.22);
+  --atmr-status-02-container-default: rgba(92, 110, 240, 0.24);
+  --atmr-success-container-default: rgba(0, 172, 67, 0.2);
+  --crm-page: #0f1522;
+  --crm-chart-now: var(--atmr-accent-300);
+  --crm-chart-past: var(--atmr-status-01-300);
+  --crm-panel: #34245a;
+  --crm-glow-a: #3b2470;
+  --crm-glow-b: #6a2a14;
+  --crm-inverse: var(--atmr-neutral-50);
+  --crm-on-inverse: var(--atmr-neutral-990);
+  --crm-warning-container: rgba(253, 166, 16, 0.18);
+  --crm-info-container: rgba(31, 105, 255, 0.2);
+  --crm-overlay: rgba(5, 8, 16, 0.6);
+  color-scheme: dark;
+}
+
+/* =====================================================================
+   Привязка к утилитам Tailwind. `inline` оставляет утилиты ссылками на
+   переменные, поэтому смена темы перекрашивает всё без пересборки.
+   Имена утилит повторяют семантику «Атомаро»: fg-muted, line-soft,
+   accent-container, s01 — чтобы класс в разметке читался как токен.
+   ===================================================================== */
+@theme inline {
+  --color-*: initial;
+
+  --color-page: var(--crm-page);
+  --color-frame: var(--crm-frame);
+  --color-card: var(--crm-card);
+  --color-surface-1: var(--atmr-bg-surface1);
+  --color-surface-2: var(--atmr-bg-surface2);
+  --color-surface-3: var(--atmr-bg-surface3);
+  --color-surface-4: var(--atmr-bg-surface4);
+  --color-elevated: var(--atmr-bg-elevated-m);
+  --color-disabled: var(--atmr-bg-disabled);
+
+  --color-fg: var(--atmr-fg-default);
+  --color-fg-soft: var(--atmr-fg-soft);
+  --color-fg-muted: var(--atmr-fg-muted);
+  --color-fg-disabled: var(--atmr-fg-disabled);
+
+  --color-line-default: var(--atmr-border-default);
+  --color-line-soft: var(--atmr-border-soft);
+  --color-line-muted: var(--atmr-border-muted);
+
+  --color-accent: var(--atmr-accent-default);
+  --color-accent-hover: var(--atmr-accent-hover);
+  --color-accent-active: var(--atmr-accent-active);
+  --color-accent-muted: var(--atmr-accent-muted);
+  --color-accent-100: var(--atmr-accent-100);
+  --color-accent-300: var(--atmr-accent-300);
+  --color-on-accent: var(--atmr-accent-on-accent);
+  --color-accent-container: var(--atmr-accent-container-default);
+  --color-accent-container-hover: var(--atmr-accent-container-hover);
+  --color-accent-container-active: var(--atmr-accent-container-active);
+
+  --color-neutral: var(--atmr-neutral-default);
+  --color-neutral-hover: var(--atmr-neutral-hover);
+  --color-on-neutral: var(--atmr-neutral-on-neutral);
+  --color-neutral-container: var(--atmr-neutral-container-default);
+  --color-neutral-container-hover: var(--atmr-neutral-container-hover);
+  --color-neutral-container-active: var(--atmr-neutral-container-active);
+  --color-neutral-50: var(--atmr-neutral-50);
+  --color-neutral-990: var(--atmr-neutral-990);
+
+  --color-s01: var(--atmr-base-status-01);
+  --color-s01-100: var(--atmr-status-01-100);
+  --color-s01-200: var(--atmr-status-01-200);
+  --color-s01-container: var(--atmr-status-01-container-default);
+  --color-s02: var(--atmr-base-status-02);
+  --color-s02-200: var(--atmr-status-02-200);
+  --color-s02-container: var(--atmr-status-02-container-default);
+
+  --color-success: var(--atmr-success-default);
+  --color-success-container: var(--atmr-success-container-default);
+  --color-warning: var(--atmr-warning-default);
+  --color-warning-container: var(--crm-warning-container);
+  --color-error: var(--atmr-error-default);
+  --color-error-container: var(--atmr-error-container-default);
+  --color-info: var(--atmr-info-default);
+  --color-info-container: var(--crm-info-container);
+
+  --color-chart-now: var(--crm-chart-now);
+  --color-chart-past: var(--crm-chart-past);
+  --color-chart-line: var(--crm-chart-line);
+  --color-panel: var(--crm-panel);
+  --color-inverse: var(--crm-inverse);
+  --color-on-inverse: var(--crm-on-inverse);
+  --color-overlay: var(--crm-overlay);
+  --color-white: #fff;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+
+  --font-sans: var(--atmr-font-family-base);
+
+  /* Шкала «Атомаро»: Display / Heading / Body / Description */
+  --text-display-l: 48px;
+  --text-display-l--line-height: 52px;
+  --text-display-m: 42px;
+  --text-display-m--line-height: 44px;
+  --text-display-s: 32px;
+  --text-display-s--line-height: 44px;
+  --text-h1: 28px;
+  --text-h1--line-height: 32px;
+  --text-h2: 22px;
+  --text-h2--line-height: 24px;
+  --text-h3: 18px;
+  --text-h3--line-height: 20px;
+  --text-h4: 16px;
+  --text-h4--line-height: 20px;
+  --text-body-l: 18px;
+  --text-body-l--line-height: 26px;
+  --text-body-m: 16px;
+  --text-body-m--line-height: 24px;
+  --text-body-s: 14px;
+  --text-body-s--line-height: 20px;
+  --text-desc: 12px;
+  --text-desc--line-height: 16px;
+
+  --font-weight-regular: var(--atmr-font-weight-regular);
+  --font-weight-medium: var(--atmr-font-weight-semibold);
+  --font-weight-bold: var(--atmr-font-weight-bold);
+
+  --radius-xs: var(--atmr-border-radius-xs);
+  --radius-s: var(--atmr-border-radius-s);
+  --radius-m: var(--atmr-border-radius-m);
+  --radius-l: var(--atmr-border-radius-l);
+  --radius-xl: var(--atmr-border-radius-xl);
+  --radius-2xl: var(--atmr-border-radius-2xl);
+  --radius-card: var(--crm-radius-card);
+  --radius-block: var(--crm-radius-block);
+  --radius-frame: var(--crm-radius-frame);
+
+  --shadow-bottom-s: var(--atmr-shadow-bottom-s);
+  --shadow-bottom-m: var(--atmr-shadow-bottom-m);
+  --shadow-bottom-l: var(--atmr-shadow-bottom-l);
+  --shadow-bottom-xl: var(--atmr-shadow-bottom-xl);
+  --shadow-controls: var(--atmr-shadow-bottom-controls);
+
+  --ease-productive: var(--atmr-motion-easing-productive-standard);
+  --ease-productive-in: var(--atmr-motion-easing-productive-entrance);
+  --ease-productive-out: var(--atmr-motion-easing-productive-exit);
+  --ease-bounce: var(--atmr-motion-easing-productive-bouncing);
+  --ease-expressive: var(--atmr-motion-easing-expressive-standard);
+  --ease-expressive-in: var(--atmr-motion-easing-expressive-entrance);
+}
+
+/* =====================================================================
+   БАЗА
+   ===================================================================== */
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--atmr-border-muted);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--crm-page);
+    color: var(--atmr-fg-default);
+    font-family: var(--atmr-font-family-base);
+    font-size: 16px;
+    line-height: 24px;
+    -webkit-font-smoothing: antialiased;
+    transition: background-color var(--atmr-motion-duration-m)
+      var(--atmr-motion-easing-productive-standard);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--atmr-accent-default);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--atmr-accent-default);
+    color: #fff;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--atmr-fg-disabled);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 1ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 1ms !important;
+      transition-delay: 0ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* =====================================================================
+   ПАТТЕРНЫ CRM (раздел «Подключение», пункт 3)
+   ===================================================================== */
+@layer components {
+  /* Цифры в данных — табличные, чтобы колонки не «плясали». */
+  .num,
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Карточка дашборда: surface1, скругление 2xl, воздух внутри. */
+  .card {
+    background: var(--crm-card);
+    border-radius: var(--crm-radius-card);
+    min-width: 0;
+    position: relative;
+  }
+
+  .card-pad {
+    padding: clamp(20px, 2vw, 28px);
+  }
+
+  /* Панель — вложенный или второстепенный контейнер, скругление xl. */
+  .panel {
+    background: var(--crm-card);
+    border-radius: var(--atmr-border-radius-xl);
+  }
+
+  .card-title {
+    font: 700 22px/24px var(--atmr-font-family-base);
+    color: var(--atmr-fg-default);
+  }
+
+  .card-sub {
+    font: 400 14px/20px var(--atmr-font-family-base);
+    color: var(--atmr-fg-muted);
+  }
+
+  /* Подпись над значением и прочий вспомогательный текст. */
+  .cap {
+    font: 400 14px/20px var(--atmr-font-family-base);
+    color: var(--atmr-fg-muted);
+  }
+
+  /* Заголовок колонки таблицы и подпись поля — Description L. */
+  .label {
+    font: 400 12px/16px var(--atmr-font-family-base);
+    color: var(--atmr-fg-muted);
+  }
+
+  /* Приветствие / заголовок экрана: Display L с плавной подстройкой. */
+  .page-title {
+    font: 500 clamp(32px, 4.4vw, 56px) / 1.05 var(--atmr-font-family-base);
+    letter-spacing: -0.015em;
+    color: var(--atmr-fg-default);
+  }
+
+  /* Метрика CRM: единственное типографическое расширение системы. */
+  .metric {
+    font: 500 clamp(64px, 7vw, 96px) / 0.9 var(--atmr-font-family-base);
+    letter-spacing: -0.045em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .money {
+    font: 500 clamp(28px, 2.5vw, 40px) / 1 var(--atmr-font-family-base);
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .crm-block {
+    border-radius: var(--crm-radius-block);
+  }
+}
+
+/* =====================================================================
+   ДВИЖЕНИЕ — кривые и длительности системы
+   Productive — для всего рабочего. Expressive — только для загрузки графиков.
+   ===================================================================== */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Появление меню: entrance по прозрачности + bouncing по масштабу. */
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes grow-y {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-rise {
+  animation: rise var(--atmr-motion-duration-m) var(--atmr-motion-easing-productive-entrance) both;
+}
+.animate-fade {
+  animation: fade var(--atmr-motion-duration-s) var(--atmr-motion-easing-productive-entrance) both;
+}
+.animate-menu {
+  transform-origin: top;
+  animation:
+    fade var(--atmr-motion-duration-s) var(--atmr-motion-easing-productive-entrance) both,
+    menu-in var(--atmr-motion-duration-m) var(--atmr-motion-easing-productive-bouncing) both;
+}
+.animate-pop {
+  animation: menu-in var(--atmr-motion-duration-m) var(--atmr-motion-easing-productive-bouncing)
+    both;
+}
+.animate-toast {
+  animation:
+    fade var(--atmr-motion-duration-s) linear both,
+    toast-in var(--atmr-motion-duration-m) var(--atmr-motion-easing-productive-bouncing) both;
+}
+/* Рост столбцов и полос при загрузке — expressive-entrance, длительность l. */
+.animate-grow-y {
+  transform-origin: bottom;
+  animation: grow-y var(--atmr-motion-duration-l) var(--atmr-motion-easing-expressive-entrance) both;
+}
+.animate-grow-x {
+  transform-origin: left;
+  animation: grow-x var(--atmr-motion-duration-l) var(--atmr-motion-easing-expressive-entrance) both;
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--atmr-bg-surface3) 25%,
+    var(--atmr-bg-surface4) 37%,
+    var(--atmr-bg-surface3) 63%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border-radius: var(--atmr-border-radius-l);
+}
