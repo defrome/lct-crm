@@ -1,6 +1,10 @@
+# Один домен на всё приложение: nginx внутри контейнера веб-интерфейса сам
+# разводит /api/, /docs, /openapi.json и /kc/ на API и Keycloak, а остальное
+# отдаёт как SPA. Поэтому новых доменов и DNS-записей не требуется, а браузер
+# обращается только к одному origin — у API нет CORS.
 {$DOMAIN} {
 	encode gzip
-	reverse_proxy api:8000
+	reverse_proxy web:80
 }
 
 {$KEYCLOAK_DOMAIN} {

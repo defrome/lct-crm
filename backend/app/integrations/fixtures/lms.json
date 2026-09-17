@@ -1,0 +1,88 @@
+{
+  "_comment": "ДЕМОНСТРАЦИОННЫЕ ДАННЫЕ. Форма конверта и имена полей приняты по допущению — контракт API от заказчика (OPEN-01, OPEN-04) не получен. Соответствие полей описано в app/integrations/contract.py::LMS_CONTRACT.",
+  "generated_at": "2026-09-17T09:00:00+03:00",
+  "next_cursor": null,
+  "items": [
+    {
+      "id": "lms-10241",
+      "university": {
+        "id": "u-0077",
+        "name": "МГТУ им. Н.Э. Баумана",
+        "region": "г. Москва",
+        "inn": "7701002520"
+      },
+      "direction": "DevOps",
+      "product": {"name": "Astra Linux Special Edition", "vendor": "Астра"},
+      "manager": "Камов Кирилл Андреевич",
+      "contract_number": "ДЛ-2026/114",
+      "license_signed_at": "2026-02-17",
+      "license_years": 3,
+      "status": "Передано в вуз",
+      "comment": "Курс запущен на двух потоках",
+      "contacts": [
+        {
+          "full_name": "Соколова Анна Викторовна",
+          "position": "Начальник учебного управления",
+          "email": "a.sokolova@example.edu",
+          "phone": "+7 495 000-11-22"
+        }
+      ]
+    },
+    {
+      "id": "lms-10242",
+      "university": {
+        "id": "u-0102",
+        "name": "Санкт-Петербургский политехнический университет",
+        "region": "г. Санкт-Петербург",
+        "inn": "7804040077"
+      },
+      "direction": "Data Science",
+      "product": {"name": "Postgres Pro Enterprise", "vendor": "Postgres Professional"},
+      "manager": "Камов Кирилл Андреевич",
+      "contract_number": "ДЛ-2026/118",
+      "license_signed_at": "01.03.2026",
+      "license_years": 5,
+      "status": "Передано в вуз",
+      "comment": null,
+      "contacts": [
+        {
+          "full_name": "Орлов Дмитрий Петрович",
+          "position": "Проректор по ИТ",
+          "email": "d.orlov@example.edu",
+          "phone": null
+        }
+      ]
+    },
+    {
+      "id": "lms-10243",
+      "university": {
+        "id": "u-0310",
+        "name": "Новосибирский государственный университет",
+        "region": "Новосибирская область",
+        "inn": null
+      },
+      "direction": "QA",
+      "product": {"name": "Альт Рабочая станция", "vendor": "БАЗАЛЬТ СПО"},
+      "manager": "Неизвестный Сотрудник",
+      "contract_number": "ДЛ-2026/121",
+      "license_signed_at": "45900",
+      "license_years": "3 года",
+      "status": "На согласовании",
+      "comment": "Ждём подписи проректора",
+      "contacts": []
+    },
+    {
+      "id": "lms-10244",
+      "university": {"id": null, "name": "   ", "region": null, "inn": null},
+      "direction": "Информационная безопасность",
+      "product": {"name": "РЕД ОС", "vendor": "Ред Софт"},
+      "manager": null,
+      "contract_number": "ДЛ-2026/125",
+      "license_signed_at": null,
+      "license_years": 42,
+      "status": null,
+      "comment": "Запись без названия вуза — отбраковывается на разборе",
+      "contacts": []
+    }
+  ]
+}

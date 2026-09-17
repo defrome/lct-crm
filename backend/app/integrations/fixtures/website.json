@@ -1,0 +1,64 @@
+{
+  "_comment": "ДЕМОНСТРАЦИОННЫЕ ДАННЫЕ. Конверт Laravel-ресурса и транслитерированные имена полей приняты по допущению (OPEN-01, OPEN-04). Соответствие полей — app/integrations/contract.py::WEBSITE_CONTRACT.",
+  "links": {"next": null},
+  "meta": {"current_page": 1, "total": 3},
+  "data": [
+    {
+      "uuid": "web-5011",
+      "vuz_nazvanie": "МГТУ им. Н.Э. Баумана",
+      "region": "г. Москва",
+      "inn": "7701002520",
+      "napravlenie": "DevOps",
+      "vendor": "Астра",
+      "po": "Astra Linux Special Edition",
+      "otvetstvennyj_shkola": "Камов Кирилл Андреевич",
+      "nomer_dogovora": "ДЛ-2026/114",
+      "data_podpisaniya": "17.02.2026",
+      "srok_licenzii": 3,
+      "status_peredachi": "Передано в вуз",
+      "kommentarij": "Заявка с сайта дублирует запись из LMS — upsert не создаёт дубль",
+      "otvetstvennye_vuza": [
+        {
+          "fio": "Соколова Анна Викторовна",
+          "dolzhnost": "Начальник учебного управления",
+          "email": "a.sokolova@example.edu",
+          "telefon": "+7 495 000-11-22"
+        }
+      ]
+    },
+    {
+      "uuid": "web-5012",
+      "vuz_nazvanie": "Казанский федеральный университет",
+      "region": "Республика Татарстан",
+      "inn": "1655018018",
+      "napravlenie": "QA",
+      "vendor": "БАЗАЛЬТ СПО",
+      "po": "Альт Рабочая станция",
+      "otvetstvennyj_shkola": "Менеджерова Ольга Сергеевна",
+      "nomer_dogovora": null,
+      "data_podpisaniya": null,
+      "srok_licenzii": null,
+      "status_peredachi": "Заявка с сайта",
+      "kommentarij": "Обращение через форму на сайте",
+      "otvetstvennye_vuza": [
+        {"fio": "Гарипов Ильдар Рустемович", "dolzhnost": "Декан", "email": null, "telefon": null}
+      ]
+    },
+    {
+      "uuid": "web-5013",
+      "vuz_nazvanie": "Казанскй федеральный университет",
+      "region": "Республика Татарстан",
+      "inn": null,
+      "napravlenie": "QA",
+      "vendor": null,
+      "po": null,
+      "otvetstvennyj_shkola": null,
+      "nomer_dogovora": null,
+      "data_podpisaniya": null,
+      "srok_licenzii": null,
+      "status_peredachi": "Заявка с сайта",
+      "kommentarij": "Опечатка в названии вуза — предупреждение с подсказкой, без автослияния",
+      "otvetstvennye_vuza": []
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "CRM IT School",
+    "title": "CRM ИТ Школы",
     "description": "\nCRM ИТ Школы Ростелекома — ядро данных (SPEC-01).\n\n**Что здесь есть:** справочники (вузы, вендоры, ИТ-направления, ИТ-продукты,\nконтакты вузов), карточки взаимодействий, двухфазный импорт каталогов из Excel\nи журнал аудита.\n\n**Чего здесь нет:** workflow-движок и переходы по этапам (SPEC-02), отчёты\n(SPEC-03), интеграции с LMS и сайтом (SPEC-04). Модель данных под них\nподготовлена.\n\n### Авторизация\n* `AUTH_MODE=dev` — заголовок `X-Debug-User` с UUID, `keycloak_id` или email\n  существующего сотрудника. Запрещён при `ENV=production`.\n* `AUTH_MODE=keycloak` — `Authorization: Bearer <JWT>`, проверка подписи по JWKS.\n\n### Роли\n* `user` — видит только закреплённые за собой вузы и связанные с ними данные;\n* `manager` — видит всё, может создавать и изменять;\n* `admin` — плюс мягкое удаление и доступ к журналу аудита.\n\n### Формат ошибок\nЛюбая ошибка возвращается в едином виде:\n\n```json\n{\"error\": {\"code\": \"NOT_FOUND\", \"message\": \"Объект не найден\",\n           \"details\": {}, \"request_id\": \"0d2f...\"}}\n```\n",
     "version": "0.1.0"
   },
@@ -6294,6 +6294,329 @@
         }
       }
     },
+    "/api/v1/integrations/sources": {
+      "get": {
+        "tags": [
+          "Интеграции"
+        ],
+        "summary": "Состояние интеграций",
+        "description": "Показывает, во что сейчас воткнут каждый источник и по какому соответствию полей разбираются его данные.\n\n**Контракт принят по допущению.** Заказчик не передал описание API (`OPEN-01`) и перечень согласованных полей (`OPEN-04`), поэтому источник без настроенного адреса работает в режиме `fixture` — на демонстрационных данных из репозитория. Когда контракт появится, меняется только соответствие полей в `app/integrations/contract.py`; остальной код приёма не трогается.",
+        "operationId": "list_sources_api_v1_integrations_sources_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SourceDescription"
+                  },
+                  "type": "array",
+                  "title": "Response List Sources Api V1 Integrations Sources Get"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Доступ запрещён. Коды: ACCESS_DENIED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Объект не найден. Коды: NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/{source}/sync": {
+      "post": {
+        "tags": [
+          "Интеграции"
+        ],
+        "summary": "Запустить синхронизацию",
+        "description": "Забирает данные источника, приводит их к модели CRM и применяет.\n\nПо умолчанию `dry_run = true`: запуск разбирает записи, считает, что изменится, и откатывает все изменения — новый источник можно направить на боевую базу и посмотреть результат, ничего не записав. Для реальной записи передайте `dry_run: false`.\n\nЗапись идёт через тот же сервисный слой, что и импорт Excel, поэтому вуз из LMS и тот же вуз из файла не превращаются в два похожих. Ключ upsert — тройка «вуз + направление + продукт», так что повторный запуск не плодит дубли. Новые карточки автоматически встают на маршрут workflow по умолчанию.\n\nПустое значение во внешней системе означает «нет данных» и не затирает заполненное поле в БД.",
+        "operationId": "run_sync_api_v1_integrations__source__sync_post",
+        "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IntegrationSource"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Доступ запрещён. Коды: ACCESS_DENIED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Объект не найден. Коды: NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Внутренняя ошибка. Коды: INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Ошибка. Коды: INTERNAL_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/syncs": {
+      "get": {
+        "tags": [
+          "Интеграции"
+        ],
+        "summary": "История синхронизаций",
+        "description": "Запуски с их статусами, статистикой и замечаниями по записям.",
+        "operationId": "list_runs_api_v1_integrations_syncs_get",
+        "parameters": [
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/IntegrationSource"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Фильтр по источнику",
+              "title": "Source"
+            },
+            "description": "Фильтр по источнику"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Сортировка: `field` по возрастанию, `-field` по убыванию, через запятую",
+              "examples": [
+                "-created_at",
+                "name"
+              ],
+              "title": "Sort"
+            },
+            "description": "Сортировка: `field` по возрастанию, `-field` по убыванию, через запятую"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Номер страницы, начиная с 1",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Номер страницы, начиная с 1"
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "description": "Размер страницы, максимум 200",
+              "default": 50,
+              "title": "Size"
+            },
+            "description": "Размер страницы, максимум 200"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_IntegrationSyncRunRead_"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Доступ запрещён. Коды: ACCESS_DENIED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Объект не найден. Коды: NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/syncs/{run_id}": {
+      "get": {
+        "tags": [
+          "Интеграции"
+        ],
+        "summary": "Результат одной синхронизации",
+        "description": "Полная статистика и построчные замечания конкретного запуска.",
+        "operationId": "get_run_api_v1_integrations_syncs__run_id__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntegrationSyncRunRead"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Доступ запрещён. Коды: ACCESS_DENIED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Объект не найден. Коды: NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/audit": {
       "get": {
         "tags": [
@@ -6819,7 +7142,7 @@
         "properties": {
           "file": {
             "type": "string",
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "File",
             "description": "Файл одного из десяти допустимых форматов"
           },
@@ -6846,7 +7169,7 @@
         "properties": {
           "file": {
             "type": "string",
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "File",
             "description": "Файл каталога .xlsx или .xls"
           },
@@ -7596,6 +7919,175 @@
           "contacts"
         ],
         "title": "ImportTarget"
+      },
+      "IntegrationMode": {
+        "type": "string",
+        "enum": [
+          "fixture",
+          "http"
+        ],
+        "title": "IntegrationMode",
+        "description": "Where a source's payload actually comes from.\n\n`fixture` replays a JSON file shipped with the repository, so the whole\ningest path is demonstrable before the customer hands over the API\ncontract; `http` calls the real endpoint."
+      },
+      "IntegrationSource": {
+        "type": "string",
+        "enum": [
+          "lms",
+          "website"
+        ],
+        "title": "IntegrationSource",
+        "description": "External systems the CRM pulls data from (FR-06, UC-U-02)."
+      },
+      "IntegrationSyncRunRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "source": {
+            "$ref": "#/components/schemas/IntegrationSource"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/IntegrationMode"
+          },
+          "status": {
+            "$ref": "#/components/schemas/IntegrationSyncStatus"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "title": "Dry Run"
+          },
+          "stats": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Stats"
+          },
+          "messages": {
+            "items": {},
+            "type": "array",
+            "title": "Messages"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "source",
+          "mode",
+          "status",
+          "dry_run",
+          "stats",
+          "messages",
+          "error_message",
+          "created_at",
+          "finished_at",
+          "created_by"
+        ],
+        "title": "IntegrationSyncRunRead"
+      },
+      "IntegrationSyncStats": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "default": 0
+          },
+          "to_create": {
+            "type": "integer",
+            "title": "To Create",
+            "description": "Сколько карточек будет создано",
+            "default": 0
+          },
+          "to_update": {
+            "type": "integer",
+            "title": "To Update",
+            "description": "Сколько карточек будет обновлено",
+            "default": 0
+          },
+          "skipped": {
+            "type": "integer",
+            "title": "Skipped",
+            "default": 0
+          },
+          "errors": {
+            "type": "integer",
+            "title": "Errors",
+            "default": 0
+          },
+          "warnings": {
+            "type": "integer",
+            "title": "Warnings",
+            "default": 0
+          },
+          "created": {
+            "type": "integer",
+            "title": "Created",
+            "description": "Фактически создано; при dry-run всегда 0",
+            "default": 0
+          },
+          "updated": {
+            "type": "integer",
+            "title": "Updated",
+            "description": "Фактически обновлено; при dry-run всегда 0",
+            "default": 0
+          },
+          "contacts_created": {
+            "type": "integer",
+            "title": "Contacts Created",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "IntegrationSyncStats"
+      },
+      "IntegrationSyncStatus": {
+        "type": "string",
+        "enum": [
+          "running",
+          "succeeded",
+          "failed"
+        ],
+        "title": "IntegrationSyncStatus"
       },
       "InteractionCreate": {
         "properties": {
@@ -8412,6 +8904,46 @@
         ],
         "title": "Page[ImportRowRead]"
       },
+      "Page_IntegrationSyncRunRead_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/IntegrationSyncRunRead"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Общее число записей, удовлетворяющих фильтру"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page",
+            "description": "Номер текущей страницы, начиная с 1"
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size",
+            "description": "Размер страницы"
+          },
+          "pages": {
+            "type": "integer",
+            "title": "Pages",
+            "description": "Всего страниц"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "size",
+          "pages"
+        ],
+        "title": "Page[IntegrationSyncRunRead]"
+      },
       "Page_InteractionRead_": {
         "properties": {
           "items": {
@@ -9195,6 +9727,56 @@
         "title": "RouteView",
         "description": "Маршрут конкретной карточки: схема, текущее положение и история."
       },
+      "SourceDescription": {
+        "properties": {
+          "source": {
+            "$ref": "#/components/schemas/IntegrationSource"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/IntegrationMode",
+            "description": "`fixture` — демонстрационные данные из репозитория, `http` — реальный API"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url",
+            "description": "Адрес внешнего API, если он настроен"
+          },
+          "contract_is_provisional": {
+            "type": "boolean",
+            "title": "Contract Is Provisional",
+            "description": "Контракт принят по допущению: заказчик не передал ни описание API (OPEN-01), ни перечень согласованных полей (OPEN-04)"
+          },
+          "fields": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Fields",
+            "description": "Соответствие «поле CRM → путь в JSON внешней системы»"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "title",
+          "mode",
+          "contract_is_provisional",
+          "fields"
+        ],
+        "title": "SourceDescription",
+        "description": "Во что сейчас воткнута интеграция и по какому соответствию полей."
+      },
       "StageCardCount": {
         "properties": {
           "stage_id": {
@@ -9624,6 +10206,34 @@
           "format"
         ],
         "title": "StatisticsRequest"
+      },
+      "SyncRequest": {
+        "properties": {
+          "dry_run": {
+            "type": "boolean",
+            "title": "Dry Run",
+            "description": "По умолчанию `true`: синхронизация разбирает данные и сообщает, что изменится, ничего не записывая. Для реальной записи передайте `false`",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "SyncRequest"
+      },
+      "SyncResult": {
+        "properties": {
+          "run": {
+            "$ref": "#/components/schemas/IntegrationSyncRunRead"
+          },
+          "stats": {
+            "$ref": "#/components/schemas/IntegrationSyncStats"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run",
+          "stats"
+        ],
+        "title": "SyncResult"
       },
       "TransitionCreate": {
         "properties": {
@@ -10186,6 +10796,13 @@
           "type": {
             "type": "string",
             "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
           }
         },
         "type": "object",
@@ -10536,11 +11153,14 @@
       }
     },
     "securitySchemes": {
-      "DebugUser": {
-        "type": "apiKey",
-        "in": "header",
-        "name": "X-Debug-User",
-        "description": "UUID, keycloak_id или email существующего сотрудника"
+      "KeycloakOAuth2": {
+        "type": "oauth2",
+        "flows": {
+          "password": {
+            "tokenUrl": "http://localhost:8080/realms/crm/protocol/openid-connect/token",
+            "scopes": {}
+          }
+        }
       }
     }
   },
@@ -10594,6 +11214,10 @@
       "description": "Загрузка → маппинг → предпросмотр → запись."
     },
     {
+      "name": "Интеграции",
+      "description": "Приём данных из LMS и с сайта. Контракт принят по допущению — см. docs/INTEGRATIONS.md."
+    },
+    {
       "name": "Аудит",
       "description": "Журнал изменений, только для роли admin."
     },
@@ -10604,7 +11228,7 @@
   ],
   "security": [
     {
-      "DebugUser": []
+      "KeycloakOAuth2": []
     }
   ]
 }

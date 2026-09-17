@@ -12,6 +12,10 @@ from typing import Literal
 from pydantic import computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# `app.models.enums` is a leaf module (stdlib `enum` only), so importing it here
+# keeps the setting typed without pulling the ORM into configuration.
+from app.models.enums import IntegrationMode
+
 # `test` is used by the test-server compose configuration.  Keep it distinct
 # from local development while preserving the production-only auth safeguard.
 Environment = Literal["local", "dev", "test", "staging", "production"]
@@ -20,7 +24,11 @@ AuthMode = Literal["dev", "keycloak"]
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        # Both locations are read, the later one winning: `.env` next to the
+        # backend when it is run on its own, and the repository root `.env`
+        # that docker compose already uses — so a monorepo checkout needs one
+        # file, not two copies that drift apart.
+        env_file=("../.env", ".env"),
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=False,
@@ -55,6 +63,20 @@ class Settings(BaseSettings):
     # Minimal similarity (0..100) for suggesting an existing university as a
     # match for a slightly different spelling coming from Excel.
     import_fuzzy_threshold: int = 88
+
+    # --- Integrations (SPEC-04) --------------------------------------------
+    # `fixture` replays the JSON shipped in app/integrations/fixtures, so the
+    # ingest path works before the customer provides the API contract.
+    # A source whose URL is unset falls back to its fixture even in `http` mode.
+    integrations_mode: IntegrationMode = IntegrationMode.FIXTURE
+    lms_api_url: str | None = None
+    lms_api_token: str | None = None
+    website_api_url: str | None = None
+    website_api_token: str | None = None
+    integrations_timeout: float = 15.0
+    # Hard cap on pages followed in one run — an unbounded cursor loop is one
+    # misbehaving upstream away.
+    integrations_page_limit: int = 100
 
     # --- Attachments -------------------------------------------------------
     # Stage attachments (FR-04). Stored in the database, so the cap also bounds

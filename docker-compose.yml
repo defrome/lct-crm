@@ -29,8 +29,11 @@ services:
       # request came in on (the api container reaches Keycloak as
       # `keycloak:8080`, the browser/Swagger as `localhost:8080` — without
       # this they'd disagree and token validation would fail on `iss`).
-      KC_HOSTNAME: localhost
-      KC_HOSTNAME_PORT: ${KEYCLOAK_PORT:-8080}
+      # Полный URL, а не просто хост: иначе issuer собирается из заголовка Host
+      # запроса, и токен, полученный через прокси веб-интерфейса (Host
+      # localhost:5173), получает `iss` без порта — API такой токен отвергает.
+      # Для прямых обращений на :8080 значение issuer не меняется.
+      KC_HOSTNAME: http://localhost:${KEYCLOAK_PORT:-8080}
       KC_HOSTNAME_STRICT_HTTPS: "false"
       KC_HTTP_ENABLED: "true"
     ports:
@@ -44,7 +47,8 @@ services:
       retries: 20
 
   api:
-    build: .
+    build:
+      context: ./backend
     container_name: crm-api
     depends_on:
       db:
@@ -68,6 +72,12 @@ services:
       # to dial itself and fail every token check with a connection error
       # (same reasoning as hardcoding POSTGRES_HOST above).
       KEYCLOAK_JWKS_URL: http://keycloak:8080/realms/crm/protocol/openid-connect/certs
+      # Интеграции: без заданных URL источники работают на демонстрационных данных.
+      INTEGRATIONS_MODE: ${INTEGRATIONS_MODE:-fixture}
+      LMS_API_URL: ${LMS_API_URL:-}
+      LMS_API_TOKEN: ${LMS_API_TOKEN:-}
+      WEBSITE_API_URL: ${WEBSITE_API_URL:-}
+      WEBSITE_API_TOKEN: ${WEBSITE_API_TOKEN:-}
     ports:
       - "${API_PORT:-8000}:8000"
     healthcheck:
@@ -75,6 +85,30 @@ services:
       interval: 10s
       timeout: 3s
       retries: 10
+
+  web:
+    build:
+      context: ./frontend
+    container_name: crm-web
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      # nginx внутри контейнера проксирует эти два origin'а под своим доменом,
+      # поэтому браузер видит только same-origin запросы: у API нет CORS, а в
+      # realm Keycloak прописан один web origin.
+      API_ORIGIN: http://api:8000
+      KEYCLOAK_ORIGIN: http://keycloak:8080
+    ports:
+      - "${WEB_PORT:-5173}:80"
+    healthcheck:
+      # 127.0.0.1, а не localhost: nginx слушает только IPv4, а busybox-wget
+      # резолвит localhost сначала в ::1 и получает connection refused.
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
 
   prometheus:
     image: prom/prometheus:v3.13.3

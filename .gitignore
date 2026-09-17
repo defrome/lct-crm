@@ -9,6 +9,11 @@ venv/
 *.egg-info/
 build/
 dist/
+
+# frontend
+node_modules/
+*.tsbuildinfo
+.vite/
 .coverage
 htmlcov/
 .DS_Store

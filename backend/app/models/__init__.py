@@ -8,10 +8,14 @@ from app.models.enums import (
     ImportJobStatus,
     ImportRowStatus,
     ImportTarget,
+    IntegrationMode,
+    IntegrationSource,
+    IntegrationSyncStatus,
     UserRole,
     WorkflowVersionStatus,
 )
 from app.models.import_job import ImportJob, ImportMappingPreset, ImportRow
+from app.models.integration import IntegrationSyncRun
 from app.models.interaction import Interaction
 from app.models.product import ITDirection, ITProduct, ITProductDirection, Vendor
 from app.models.university import University, UniversityAssignment, UniversityContact
@@ -41,6 +45,10 @@ __all__ = [
     "ImportRow",
     "ImportRowStatus",
     "ImportTarget",
+    "IntegrationMode",
+    "IntegrationSource",
+    "IntegrationSyncRun",
+    "IntegrationSyncStatus",
     "Interaction",
     "InteractionStageHistory",
     "University",

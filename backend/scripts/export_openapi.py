@@ -13,7 +13,10 @@ import json
 import sys
 from pathlib import Path
 
-DEFAULT_TARGET = Path("docs/openapi.json")
+# Repo root is two levels up from backend/scripts/, so the export lands in the
+# shared docs/ directory no matter which directory the command is run from.
+REPO_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_TARGET = REPO_ROOT / "docs" / "openapi.json"
 
 
 def main() -> None:

@@ -59,6 +59,31 @@ class AttachmentFormat(StrEnum):
     XLSX = "xlsx"
 
 
+class IntegrationSource(StrEnum):
+    """External systems the CRM pulls data from (FR-06, UC-U-02)."""
+
+    LMS = "lms"
+    WEBSITE = "website"
+
+
+class IntegrationMode(StrEnum):
+    """Where a source's payload actually comes from.
+
+    `fixture` replays a JSON file shipped with the repository, so the whole
+    ingest path is demonstrable before the customer hands over the API
+    contract; `http` calls the real endpoint.
+    """
+
+    FIXTURE = "fixture"
+    HTTP = "http"
+
+
+class IntegrationSyncStatus(StrEnum):
+    RUNNING = "running"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+
+
 class AuditAction(StrEnum):
     CREATE = "create"
     UPDATE = "update"
@@ -78,4 +103,7 @@ IMPORT_JOB_STATUS_ENUM = "import_job_status"
 IMPORT_ROW_STATUS_ENUM = "import_row_status"
 AUDIT_ACTION_ENUM = "audit_action"
 WORKFLOW_VERSION_STATUS_ENUM = "workflow_version_status"
+INTEGRATION_SOURCE_ENUM = "integration_source"
+INTEGRATION_MODE_ENUM = "integration_mode"
+INTEGRATION_SYNC_STATUS_ENUM = "integration_sync_status"
 ATTACHMENT_FORMAT_ENUM = "attachment_format"
