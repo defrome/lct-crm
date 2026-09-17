@@ -63,7 +63,9 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-crm}
       POSTGRES_DB: ${POSTGRES_DB:-crm}
       SEED_ON_START: ${SEED_ON_START:-true}
-      KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER:-}
+      # Как и в проде: тот же адрес, что уходит в KC_HOSTNAME, поэтому
+      # issuer в токене и ожидаемый API issuer не могут разойтись.
+      KEYCLOAK_ISSUER: http://localhost:${KEYCLOAK_PORT:-8080}/realms/crm
       KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-}
       # Hardcoded, not read from .env: inside the compose network this
       # container must reach Keycloak by its service name. `.env` typically

@@ -57,7 +57,12 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-crm}
       POSTGRES_DB: ${POSTGRES_DB:-crm}
       SEED_ON_START: ${SEED_ON_START:-false}
-      KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER:-}
+      # Выводится из KEYCLOAK_DOMAIN, а не читается из .env: это ровно тот
+      # же адрес, который Keycloak получает в KC_HOSTNAME, поэтому issuer
+      # в токене и issuer, который проверяет API, физически не могут
+      # разъехаться. Раньше они задавались независимо, и любое расхождение
+      # давало «Invalid issuer» без единой подсказки, где именно.
+      KEYCLOAK_ISSUER: https://${KEYCLOAK_DOMAIN:?KEYCLOAK_DOMAIN is required}/realms/crm
       KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-}
       KEYCLOAK_JWKS_URL: http://keycloak:8080/realms/crm/protocol/openid-connect/certs
     expose:
