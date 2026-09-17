@@ -17,7 +17,7 @@ from app.api.v1.deps import (
     error_responses,
 )
 from app.core.errors import ErrorCode
-from app.core.security import CurrentUser, require_admin, require_manager
+from app.core.security import CurrentUser, require_admin
 from app.schemas.common import Page
 from app.schemas.interaction import InteractionRead
 from app.schemas.workflow import (
@@ -102,7 +102,9 @@ async def get_route(interaction_id: uuid.UUID, session: SessionDep, scope: Scope
         "Ставит карточку на начальный этап опубликованной версии. Если `workflow_id` "
         "не передан, берётся workflow по умолчанию.\n\n"
         "Новые карточки встают на маршрут автоматически при создании и при импорте — "
-        "эта ручка нужна для карточек, заведённых до того, как маршрут был настроен."
+        "эта ручка нужна для карточек, заведённых до того, как маршрут был настроен.\n\n"
+        "Доступно любой роли: `user` — только для карточек вуза, за который он закреплён "
+        "в `university_assignments`, `manager` и `admin` — для любых."
     ),
     responses=error_responses(
         403,
@@ -120,7 +122,6 @@ async def start_route(
     data: RouteStartRequest,
     session: SessionDep,
     scope: ScopeDep,
-    _: CurrentUser = Depends(require_manager),
 ) -> InteractionRead:
     interaction = await RouteService(session, scope).start(
         interaction_id, workflow_id=data.workflow_id, comment=data.comment
@@ -137,7 +138,10 @@ async def start_route(
         "карточка; иначе — `422 WORKFLOW_INVALID_TRANSITION` со списком допустимых "
         "этапов в `details.allowed_stage_ids`.\n\n"
         "Если переход помечен `requires_comment`, комментарий обязателен. "
-        "Он сохраняется в истории перемещений и попадает в аудит."
+        "Он сохраняется в истории перемещений и попадает в аудит.\n\n"
+        "Доступно любой роли: `user` — только для карточек вуза, за который он закреплён "
+        "в `university_assignments` (`FR-03` — обновление статуса и комментирование "
+        "предусмотрены для рядового пользователя), `manager` и `admin` — для любых."
     ),
     responses=TRANSITION_ERRORS,
 )
@@ -146,7 +150,6 @@ async def make_transition(
     data: TransitionRequest,
     session: SessionDep,
     scope: ScopeDep,
-    _: CurrentUser = Depends(require_manager),
 ) -> InteractionRead:
     interaction = await RouteService(session, scope).transition(
         interaction_id, to_stage_id=data.to_stage_id, comment=data.comment
@@ -203,7 +206,10 @@ async def list_attachments(
         "Допустимые форматы (`FR-04`): png, jpeg, pdf, zip, gzip, rar, doc, docx, xls, xlsx.\n\n"
         "Тип определяется по сигнатуре файла, а не по имени: расширение обязано совпасть "
         "с фактическим содержимым, иначе вернётся `422 ATTACHMENT_INVALID_FORMAT`. "
-        "Этап должен принадлежать той же версии workflow, по которой идёт карточка."
+        "Этап должен принадлежать той же версии workflow, по которой идёт карточка.\n\n"
+        "Доступно любой роли: `user` — только для карточек вуза, за который он закреплён "
+        "в `university_assignments` (`FR-04` — прикладывание файлов не ограничено ролью), "
+        "`manager` и `admin` — для любых."
     ),
     responses=UPLOAD_ERRORS,
 )
@@ -214,7 +220,6 @@ async def upload_attachment(
     scope: ScopeDep,
     file: Annotated[UploadFile, File(description="Файл одного из десяти допустимых форматов")],
     comment: Annotated[str | None, Form(description="Комментарий к файлу")] = None,
-    _: CurrentUser = Depends(require_manager),
 ) -> AttachmentRead:
     content = await file.read()
     attachment = await AttachmentService(session, scope).upload(

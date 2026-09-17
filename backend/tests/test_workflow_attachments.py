@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import datetime as dt
+
 import pytest
 
+from app.core.access import AccessScope
 from app.core.errors import (
     AttachmentInvalidFormatError,
     AttachmentTooLargeError,
@@ -11,7 +14,8 @@ from app.core.errors import (
 )
 from app.models.enums import AttachmentFormat, AuditAction
 from app.schemas.interaction import InteractionCreate
-from app.schemas.university import UniversityCreate
+from app.schemas.university import AssignmentCreate, UniversityCreate
+from app.services.assignments import AssignmentService
 from app.services.attachments import AttachmentService
 from app.services.audit import search_audit_log
 from app.services.catalogs import UniversityService
@@ -189,6 +193,42 @@ async def test_attachment_api_roundtrip(session, client, manager_user, scope):
     assert downloaded.status_code == 200
     assert downloaded.content == ATTACHMENT_SAMPLES["pdf"]
     assert downloaded.headers["content-type"] == "application/pdf"
+
+
+async def test_user_can_upload_to_their_own_card(session, client, kam_user):
+    """Regression: uploads to a stage of an assigned card used to be hard-gated
+    to manager/admin, even though FR-04 does not restrict attachments by role."""
+    system = AccessScope.system()
+    workflow = await ensure_base_workflow(session, system)
+    version = (await WorkflowService(session, system).list_versions(workflow.id))[0]
+    stages = await WorkflowService(session, system).list_stages(version.id)
+
+    university = await UniversityService(session, system).create(UniversityCreate(name="Мой вуз"))
+    await AssignmentService(session, system).create(
+        university.id,
+        AssignmentCreate(user_id=kam_user.id, assigned_from=dt.date.today() - dt.timedelta(days=1)),
+    )
+    interaction = await InteractionService(session, system).create(
+        InteractionCreate(university_id=university.id)
+    )
+
+    response = await client.post(
+        f"/api/v1/interactions/{interaction.id}/stages/{stages[0].id}/attachments",
+        files={"file": ("договор.pdf", ATTACHMENT_SAMPLES["pdf"], "application/pdf")},
+        headers=auth(kam_user),
+    )
+    assert response.status_code == 201
+
+
+async def test_user_cannot_upload_to_a_foreign_card(session, client, kam_user, scope):
+    interaction, stages, _ = await _card_on_stage(session, scope)
+    response = await client.post(
+        f"/api/v1/interactions/{interaction.id}/stages/{stages[0].id}/attachments",
+        files={"file": ("договор.pdf", ATTACHMENT_SAMPLES["pdf"], "application/pdf")},
+        headers=auth(kam_user),
+    )
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "ACCESS_DENIED"
 
 
 async def test_attachment_api_rejects_mismatched_extension(session, client, manager_user, scope):

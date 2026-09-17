@@ -280,6 +280,74 @@ async def test_transition_api_roundtrip(session, client, manager_user, scope):
     assert bad.json()["error"]["code"] == "WORKFLOW_INVALID_TRANSITION"
 
 
+async def test_user_can_transition_their_own_card_via_api(session, client, kam_user, scope):
+    """Regression: the endpoint used to hard-gate on role and refuse every
+    `user`, even for a card in a university they are actually assigned to
+    (FR-03 explicitly gives status transitions and commenting to the base
+    user, not just manager/admin)."""
+    system = AccessScope.system()
+    workflow = await ensure_base_workflow(session, system)
+    _, stages = await _stages(session, system, workflow)
+
+    mine = await UniversityService(session, system).create(UniversityCreate(name="Мой вуз"))
+    await AssignmentService(session, system).create(
+        mine.id,
+        AssignmentCreate(user_id=kam_user.id, assigned_from=dt.date.today() - dt.timedelta(days=1)),
+    )
+    interaction = await InteractionService(session, system).create(
+        InteractionCreate(university_id=mine.id)
+    )
+
+    response = await client.post(
+        f"/api/v1/interactions/{interaction.id}/transitions",
+        json={"to_stage_id": str(stages["WF-02"].id), "comment": "КАМ двигает свою карточку"},
+        headers=auth(kam_user),
+    )
+    assert response.status_code == 200
+    assert response.json()["current_stage_id"] == str(stages["WF-02"].id)
+
+
+async def test_user_cannot_transition_a_foreign_card_via_api(session, client, kam_user, scope):
+    """The role gate is gone, but the row-level scope check must still hold."""
+    system = AccessScope.system()
+    workflow = await ensure_base_workflow(session, system)
+    _, stages = await _stages(session, system, workflow)
+    _, foreign_card = await _card(session, system, name="Чужой вуз")
+
+    response = await client.post(
+        f"/api/v1/interactions/{foreign_card.id}/transitions",
+        json={"to_stage_id": str(stages["WF-02"].id), "comment": "не моё"},
+        headers=auth(kam_user),
+    )
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "ACCESS_DENIED"
+
+
+async def test_user_can_start_route_on_their_own_card(session, client, kam_user):
+    system = AccessScope.system()
+    workflow = await ensure_base_workflow(session, system)
+    university = await UniversityService(session, system).create(UniversityCreate(name="Мой вуз"))
+    await AssignmentService(session, system).create(
+        university.id,
+        AssignmentCreate(user_id=kam_user.id, assigned_from=dt.date.today() - dt.timedelta(days=1)),
+    )
+    # Bypass the auto-start on create so `route/start` has something to do.
+    interaction = await InteractionService(session, system).create(
+        InteractionCreate(university_id=university.id)
+    )
+    interaction.workflow_version_id = None
+    interaction.current_stage_id = None
+    await session.commit()
+
+    response = await client.post(
+        f"/api/v1/interactions/{interaction.id}/route/start",
+        json={"workflow_id": str(workflow.id)},
+        headers=auth(kam_user),
+    )
+    assert response.status_code == 200
+    assert response.json()["current_stage_id"] is not None
+
+
 async def test_graph_api_reports_cards_per_stage(session, client, manager_user, scope):
     workflow = await ensure_base_workflow(session, scope)
     _, stages = await _stages(session, scope, workflow)
