@@ -195,11 +195,19 @@ jobs:
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
           ssh -p "${DEPLOY_PORT:-22}" "$DEPLOY_USER@$DEPLOY_HOST" \
-            "mkdir -p '$DEPLOY_PATH/docker/keycloak'"
+            "mkdir -p '$DEPLOY_PATH/docker/keycloak' '$DEPLOY_PATH/docker/prometheus' \
+              '$DEPLOY_PATH/docker/grafana/provisioning' '$DEPLOY_PATH/docker/grafana/dashboards'; \
+              if [ -d '$DEPLOY_PATH/docker/prometheus/prometheus.yml' ]; then \
+                rmdir '$DEPLOY_PATH/docker/prometheus/prometheus.yml'; \
+              fi"
           scp -P "${DEPLOY_PORT:-22}" docker-compose.deploy.yml \
             "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/docker-compose.deploy.yml"
           scp -P "${DEPLOY_PORT:-22}" docker/Caddyfile \
             "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/docker/Caddyfile"
+          scp -P "${DEPLOY_PORT:-22}" docker/prometheus/prometheus.yml \
+            "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/docker/prometheus/prometheus.yml"
+          scp -P "${DEPLOY_PORT:-22}" -r docker/grafana/provisioning docker/grafana/dashboards \
+            "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/docker/grafana/"
           scp -P "${DEPLOY_PORT:-22}" docker/keycloak/realm-export.json \
             "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/docker/keycloak/realm-export.json"
 
@@ -237,11 +245,11 @@ jobs:
           export API_IMAGE="$api_image" WEB_IMAGE="$web_image" IMAGE_TAG="$image_tag"
           docker compose -f docker-compose.deploy.yml pull api web
 
-          # Caddy owns the public HTTP(S) ports.  Keep its container alive during
-          # routine API releases: recreating it races with the host port bindings
-          # and unnecessarily interrupts TLS traffic.  --no-recreate still starts
-          # it for an initial deployment.
-          if ! docker compose -f docker-compose.deploy.yml up -d --no-build --no-recreate db keycloak caddy; then
+          # Do not recreate stateful services during an API release. Caddy is
+          # handled below: its configuration and domain variables can change
+          # between releases, and --no-recreate would leave it with stale (or
+          # missing) environment variables.
+          if ! docker compose -f docker-compose.deploy.yml up -d --no-build --no-recreate db keycloak; then
             echo "compose startup failed; recent container logs follow"
             docker compose -f docker-compose.deploy.yml ps || true
             docker compose -f docker-compose.deploy.yml logs --tail=100 db keycloak api web caddy || true
@@ -260,8 +268,7 @@ jobs:
             web_health="$(docker inspect --format '{{.State.Health.Status}}' crm-web 2>/dev/null || true)"
             if [ "$api_health" = "healthy" ] && [ "$web_health" = "healthy" ]; then
               echo "api and web are healthy"
-              docker compose -f docker-compose.deploy.yml ps
-              exit 0
+              break
             fi
             if [ "$api_health" = "unhealthy" ] || [ "$web_health" = "unhealthy" ]; then
               docker compose -f docker-compose.deploy.yml logs --tail=100 api web
@@ -270,6 +277,56 @@ jobs:
             sleep 2
           done
 
-          docker compose -f docker-compose.deploy.yml logs --tail=100 api web
-          exit 1
+          if [ "$api_health" != "healthy" ] || [ "$web_health" != "healthy" ]; then
+            docker compose -f docker-compose.deploy.yml logs --tail=100 api web
+            exit 1
+          fi
+
+          # Monitoring services are not dependencies of the API. Start them
+          # explicitly before Caddy so its reverse proxy can resolve grafana
+          # through Docker DNS as soon as the public endpoint is available.
+          if ! docker compose -f docker-compose.deploy.yml up -d --no-build prometheus grafana; then
+            echo "monitoring startup failed; recent container logs follow"
+            docker compose -f docker-compose.deploy.yml logs --tail=100 prometheus grafana || true
+            exit 1
+          fi
+
+          sleep 2
+          for container in crm-prometheus crm-grafana; do
+            if [ "$(docker inspect --format '{{.State.Running}}' "$container" 2>/dev/null || true)" != "true" ]; then
+              echo "$container stopped after startup; recent container logs follow"
+              docker compose -f docker-compose.deploy.yml logs --tail=100 prometheus grafana || true
+              exit 1
+            fi
+          done
+
+          # Caddy expands DOMAIN, KEYCLOAK_DOMAIN and GRAFANA_DOMAIN only when
+          # it starts. Recreate it to pick up the current values and Caddyfile;
+          # otherwise a container created before a new domain was added may
+          # expand a site label to an empty string and reject the Caddyfile.
+          #
+          # This deployment owns ports 80 and 443 through the caddy service.
+          # A legacy host-level Caddy service uses the same ports and prevents
+          # Docker from starting crm-caddy, so stop and disable it when present.
+          if command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet caddy; then
+            echo "stopping legacy host caddy service so crm-caddy can bind ports 80 and 443"
+            systemctl disable --now caddy
+          fi
+
+          if ! docker compose -f docker-compose.deploy.yml up -d --no-build --no-deps --force-recreate caddy; then
+            echo "caddy startup failed; recent container logs follow"
+            echo "processes publishing port 80:"
+            docker ps --filter publish=80 --format 'table {{.Names}}\t{{.Ports}}' || true
+            docker compose -f docker-compose.deploy.yml logs --tail=100 caddy || true
+            exit 1
+          fi
+
+          sleep 2
+          if [ "$(docker inspect --format '{{.State.Running}}' crm-caddy 2>/dev/null || true)" != "true" ]; then
+            echo "caddy stopped after startup; recent container logs follow"
+            docker compose -f docker-compose.deploy.yml logs --tail=100 caddy || true
+            exit 1
+          fi
+
+          docker compose -f docker-compose.deploy.yml ps
           REMOTE
