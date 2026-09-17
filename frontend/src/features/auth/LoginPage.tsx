@@ -52,13 +52,13 @@ export function LoginPage() {
        * а не рабочий экран, поэтому свечение живёт только здесь.
        */}
       <div
-        className="flex min-h-[calc(100dvh-1rem)] rounded-[calc(var(--crm-radius-frame)+16px)] p-2 sm:min-h-[calc(100dvh-2rem)] sm:p-[clamp(10px,3vw,48px)] lg:min-h-[calc(100dvh-3rem)]"
+        className="flex min-h-[calc(100dvh-1rem)] min-w-0 rounded-[calc(var(--crm-radius-frame)+16px)] p-2 sm:min-h-[calc(100dvh-2rem)] sm:p-[clamp(10px,3vw,48px)] lg:min-h-[calc(100dvh-3rem)]"
         style={{
           background:
             'radial-gradient(60% 80% at 0% 0%, var(--crm-glow-a), transparent 70%), radial-gradient(60% 90% at 100% 100%, var(--crm-glow-b), transparent 70%), color-mix(in srgb, var(--crm-glow-a) 50%, var(--crm-glow-b))',
         }}
       >
-        <div className="grid w-full gap-4 rounded-frame bg-frame p-4 shadow-bottom-xl sm:p-[clamp(16px,2.2vw,32px)] lg:grid-cols-[1.15fr_1fr] lg:gap-8">
+        <div className="grid min-w-0 w-full gap-4 rounded-xl bg-frame p-4 shadow-bottom-xl sm:rounded-frame sm:p-[clamp(16px,2.2vw,32px)] lg:grid-cols-[1.15fr_1fr] lg:gap-8">
           <section className="flex flex-col">
             <div className="flex items-center gap-3">
               <BrandMark />
@@ -68,7 +68,7 @@ export function LoginPage() {
               </span>
             </div>
 
-            <h1 className="page-title mt-10 max-w-[16ch] lg:mt-16">
+            <h1 className="page-title mt-8 max-w-[16ch] lg:mt-16">
               Путь вуза от первого контакта до занятий
             </h1>
             <p className="mt-4 max-w-[48ch] text-body-l text-fg-muted">
@@ -98,7 +98,7 @@ export function LoginPage() {
             </div>
           </section>
 
-          <section className="card flex items-center justify-center p-6 sm:p-10">
+          <section className="card flex min-w-0 items-center justify-center rounded-xl p-5 sm:rounded-card sm:p-10">
             <div className="animate-rise w-full max-w-[24rem]">
               <h2 className="text-h1 font-bold text-fg">Вход в систему</h2>
               <p className="mt-2 text-body-m text-fg-muted">

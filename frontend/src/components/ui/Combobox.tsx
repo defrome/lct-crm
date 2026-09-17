@@ -140,7 +140,7 @@ export function Combobox({
           </button>
 
           {open && (
-            <div className="animate-menu absolute z-[1000] mt-2 w-full min-w-[220px] overflow-hidden rounded-l bg-elevated shadow-bottom-l">
+            <div className="animate-menu absolute z-[1000] mt-2 w-full min-w-0 overflow-hidden rounded-l bg-elevated shadow-bottom-l">
               <div className="flex items-center gap-2 px-4 pt-2">
                 <Icon name="search" className="size-5 shrink-0 text-fg-muted" />
                 <input

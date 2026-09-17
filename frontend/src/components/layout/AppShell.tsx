@@ -51,9 +51,9 @@ export function AppShell() {
   const allowed = (items: NavItem[]) => items.filter((item) => !item.role || can(item.role));
 
   return (
-    <div className="min-h-dvh bg-page lg:p-4">
+    <div className="min-h-dvh w-full overflow-x-clip bg-page lg:p-4">
       {/* Рамка приложения: page-filled, скругление 44px — расширение CRM. */}
-      <div className="flex min-h-dvh bg-frame lg:min-h-[calc(100dvh-2rem)] lg:rounded-frame lg:shadow-bottom-xl">
+      <div className="flex min-h-dvh min-w-0 bg-frame lg:min-h-[calc(100dvh-2rem)] lg:rounded-frame lg:shadow-bottom-xl">
         {isDesktop && (
           <aside
             aria-label="Инструменты"
@@ -78,7 +78,7 @@ export function AppShell() {
           </aside>
         )}
 
-        <div className="min-w-0 flex-1 px-4 py-4 sm:px-6 lg:px-8 lg:py-8">
+        <div className="min-w-0 flex-1 px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-6 lg:px-8 lg:py-8">
           <div className="flex min-h-12 flex-wrap items-center gap-2 lg:flex-nowrap">
             {!isDesktop && (
               <>
@@ -252,9 +252,9 @@ function Drawer({
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-[1400]">
+    <div className="fixed inset-0 z-[1400] overflow-hidden">
       <div className="animate-fade absolute inset-0 bg-overlay" onClick={onClose} aria-hidden="true" />
-      <aside className="animate-rise absolute inset-y-2 left-2 flex w-[min(300px,calc(100vw-1rem))] flex-col rounded-card bg-frame p-4 shadow-bottom-xl">
+      <aside className="animate-rise absolute top-[max(0.5rem,env(safe-area-inset-top))] bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-2 flex w-[min(300px,calc(100vw-1rem))] flex-col rounded-card bg-frame p-4 shadow-bottom-xl">
         <div className="flex items-center justify-between gap-3 pb-4">
           <span className="flex items-center gap-2.5">
             <BrandMark size={32} />
@@ -352,5 +352,5 @@ function ScreenFallback() {
 
 /** Контейнер экрана внутри рамки — отступы задаёт сама рамка. */
 export function Page({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={clsx('w-full pb-4', className)}>{children}</div>;
+  return <div className={clsx('min-w-0 w-full pb-4', className)}>{children}</div>;
 }

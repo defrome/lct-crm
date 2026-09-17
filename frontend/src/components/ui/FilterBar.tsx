@@ -134,14 +134,14 @@ export function PeriodFilter({
           value={from ?? ''}
           aria-label={`${label}: с`}
           onChange={(event) => onChange({ from: event.target.value || undefined, to })}
-          className={clsx(CONTROL, 'tnum h-12 min-w-0 px-3 text-body-s')}
+          className={clsx(CONTROL, 'tnum h-12 min-w-0 px-3 text-body-m lg:text-body-s')}
         />
         <input
           type="date"
           value={to ?? ''}
           aria-label={`${label}: по`}
           onChange={(event) => onChange({ from, to: event.target.value || undefined })}
-          className={clsx(CONTROL, 'tnum h-12 min-w-0 px-3 text-body-s')}
+          className={clsx(CONTROL, 'tnum h-12 min-w-0 px-3 text-body-m lg:text-body-s')}
         />
       </div>
     );
@@ -155,7 +155,7 @@ export function PeriodFilter({
         value={from ?? ''}
         aria-label={`${label}: с`}
         onChange={(event) => onChange({ from: event.target.value || undefined, to })}
-        className={clsx(CONTROL, 'tnum h-12 min-w-0 flex-1 px-3 text-body-s lg:w-40 lg:flex-none')}
+        className={clsx(CONTROL, 'tnum h-12 min-w-0 flex-1 px-3 text-body-m lg:w-40 lg:flex-none lg:text-body-s')}
       />
       <span className="text-fg-muted">–</span>
       <input
@@ -163,7 +163,7 @@ export function PeriodFilter({
         value={to ?? ''}
         aria-label={`${label}: по`}
         onChange={(event) => onChange({ from, to: event.target.value || undefined })}
-        className={clsx(CONTROL, 'tnum h-12 min-w-0 flex-1 px-3 text-body-s lg:w-40 lg:flex-none')}
+        className={clsx(CONTROL, 'tnum h-12 min-w-0 flex-1 px-3 text-body-m lg:w-40 lg:flex-none lg:text-body-s')}
       />
     </div>
   );

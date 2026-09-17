@@ -55,7 +55,7 @@ export function Modal({
   if (!open) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[1500] flex items-end justify-center sm:items-center sm:p-6">
+    <div className="fixed inset-0 z-[1500] flex min-w-0 items-end justify-center sm:items-center sm:p-6">
       <div
         className="animate-fade absolute inset-0 bg-overlay backdrop-blur-[2px]"
         onClick={onClose}
@@ -68,7 +68,7 @@ export function Modal({
         aria-label={title}
         tabIndex={-1}
         className={clsx(
-          'animate-pop relative flex max-h-[92vh] w-full flex-col bg-card shadow-bottom-xl outline-none',
+          'animate-pop relative flex max-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] w-full min-w-0 flex-col bg-card shadow-bottom-xl outline-none sm:max-h-[calc(100dvh-3rem)]',
           'rounded-t-card sm:rounded-card',
           SIZES[size],
         )}
@@ -81,10 +81,10 @@ export function Modal({
           <IconButton icon="close" label="Закрыть" size="m" onClick={onClose} />
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6 sm:px-7">{children}</div>
+        <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-4 pb-5 sm:px-7 sm:pb-6">{children}</div>
 
         {footer && (
-          <footer className="flex flex-wrap items-center justify-end gap-2 px-6 pb-6 sm:px-7 sm:pb-7">
+          <footer className="flex flex-wrap items-center justify-end gap-2 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-7 sm:pb-7">
             {footer}
           </footer>
         )}

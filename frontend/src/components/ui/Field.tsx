@@ -19,7 +19,7 @@ import { Icon, type IconName } from './Icon';
  * accent, ошибка — 1px error. Подпись поля — description-l цвета fg-soft.
  */
 export const CONTROL =
-  'w-full rounded-m border-0 bg-surface-1 px-3 text-body-m text-fg outline-none ' +
+  'min-w-0 w-full rounded-m border-0 bg-surface-1 px-3 text-body-m text-fg outline-none ' +
   'shadow-[inset_0_0_0_1px_var(--atmr-border-soft)] transition-shadow duration-150 ease-productive ' +
   'hover:shadow-[inset_0_0_0_1px_var(--atmr-border-default)] ' +
   'focus:shadow-[inset_0_0_0_2px_var(--atmr-accent-default)] ' +

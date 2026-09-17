@@ -220,7 +220,7 @@ export function Pagination({
               value={size}
               onChange={(event) => onSizeChange(Number(event.target.value))}
               aria-label="Записей на странице"
-              className="h-9 cursor-pointer appearance-none rounded-m border-0 bg-neutral-container pr-9 pl-3 text-body-s font-medium text-fg transition-colors duration-150 hover:bg-neutral-container-hover"
+              className="h-9 cursor-pointer appearance-none rounded-m border-0 bg-neutral-container pr-9 pl-3 text-body-m font-medium text-fg transition-colors duration-150 hover:bg-neutral-container-hover md:text-body-s"
             >
               {[25, 50, 100, 200].map((option) => (
                 <option key={option} value={option}>

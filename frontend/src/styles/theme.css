@@ -440,10 +440,13 @@
 
   html {
     -webkit-text-size-adjust: 100%;
+    overflow-x: clip;
   }
 
   body {
     margin: 0;
+    min-width: 0;
+    overflow-x: clip;
     background: var(--crm-page);
     color: var(--atmr-fg-default);
     font-family: var(--atmr-font-family-base);
@@ -467,6 +470,22 @@
   input::placeholder,
   textarea::placeholder {
     color: var(--atmr-fg-disabled);
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    touch-action: manipulation;
+  }
+
+  @media (max-width: 639px) {
+    input,
+    select,
+    textarea {
+      font-size: 16px;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -534,9 +553,17 @@
 
   /* Приветствие / заголовок экрана: Display L с плавной подстройкой. */
   .page-title {
-    font: 500 clamp(32px, 4.4vw, 56px) / 1.05 var(--atmr-font-family-base);
-    letter-spacing: -0.015em;
+    font: 500 40px / 1.1 var(--atmr-font-family-base);
+    overflow-wrap: anywhere;
     color: var(--atmr-fg-default);
+  }
+
+  @media (min-width: 1024px) {
+    .page-title { font-size: 56px; }
+  }
+
+  @media (max-width: 639px) {
+    .page-title { font-size: 28px; line-height: 1.15; }
   }
 
   /* Метрика CRM: единственное типографическое расширение системы. */
