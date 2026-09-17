@@ -64,7 +64,7 @@ export function UsersPage() {
     {
       key: 'settings',
       header: 'Управление доступом',
-      align: 'right',
+      align: 'center',
       render: (row) =>
         can('admin') && row.role === 'user' ? (
           <Button size="s" onClick={() => setVisibilityUser(row)}>

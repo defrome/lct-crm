@@ -17,7 +17,7 @@ export interface Column<T> {
   /** Поле для параметра `sort` API; без него колонка не сортируется. */
   sortKey?: string;
   width?: string;
-  align?: 'left' | 'right';
+  align?: 'left' | 'center' | 'right';
   /** Скрывать колонку на узких экранах — форма таблицы сохраняется. */
   hideBelow?: 'sm' | 'md' | 'lg' | 'xl';
 }
@@ -113,6 +113,7 @@ export function DataTable<T>({
                     style={column.width ? { width: column.width } : undefined}
                     className={clsx(
                       'label px-2 pb-2.5 text-left font-normal whitespace-nowrap',
+                      column.align === 'center' && 'text-center',
                       column.align === 'right' && 'text-right',
                       column.hideBelow && HIDE_CLASS[column.hideBelow],
                     )}
@@ -169,6 +170,7 @@ export function DataTable<T>({
                     className={clsx(
                       'px-2 py-2 align-middle transition-colors duration-150 ease-productive',
                       'group-hover/row:bg-surface-3 first:rounded-l-l last:rounded-r-l',
+                      column.align === 'center' && 'text-center',
                       column.align === 'right' && 'text-right',
                       column.hideBelow && HIDE_CLASS[column.hideBelow],
                     )}
