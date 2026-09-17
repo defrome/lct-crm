@@ -22,8 +22,13 @@ services:
     environment:
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD is required}
-      KC_HOSTNAME: ${KEYCLOAK_DOMAIN:?KEYCLOAK_DOMAIN is required}
-      KC_HOSTNAME_STRICT_HTTPS: "true"
+      # Полный URL, а не просто хост. Веб-интерфейс ходит в Keycloak через
+      # /kc/ на основном домене, и при KC_PROXY_HEADERS=xforwarded Keycloak
+      # собирал бы issuer из пришедшего заголовка Host — токен получал бы
+      # `iss` с адресом приложения вместо KEYCLOAK_ISSUER, и API отвергал бы
+      # его с «Токен доступа недействителен». Полный URL закрепляет issuer
+      # независимо от того, каким путём пришёл запрос.
+      KC_HOSTNAME: https://${KEYCLOAK_DOMAIN:?KEYCLOAK_DOMAIN is required}
       KC_PROXY_HEADERS: xforwarded
       KC_HTTP_ENABLED: "true"
     expose:
