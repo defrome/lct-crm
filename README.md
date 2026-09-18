@@ -111,7 +111,9 @@ origin — у API нет CORS, и в realm Keycloak прописан один we
 
 ## CI/CD
 
-`.github/workflows/deploy.yml`, запускается на push в `main` и на pull request.
+`.github/workflows/deploy.yml` запускается на push в `main` и на pull request.
+Повторный deploy запускается кнопкой **Run workflow** в GitHub Actions с ветки
+`main`; для этого не нужно вручную подставлять имена образов на сервере.
 
 | Задача | Что делает |
 |---|---|

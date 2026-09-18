@@ -5,6 +5,7 @@ on:
     branches:
       - main
   pull_request:
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
@@ -103,7 +104,7 @@ jobs:
   publish:
     name: Build and publish ${{ matrix.component }} image
     needs: [backend, frontend]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -152,7 +153,7 @@ jobs:
   deploy:
     name: Deploy to test server
     needs: publish
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     environment: test
 
@@ -244,6 +245,11 @@ jobs:
           image_tag="$4"
 
           cd "$deploy_path"
+          if [ ! -f .env ]; then
+            echo "Deployment configuration .env is missing in $deploy_path" >&2
+            exit 1
+          fi
+
           export API_IMAGE="$api_image" WEB_IMAGE="$web_image" IMAGE_TAG="$image_tag"
           docker compose -f docker-compose.deploy.yml pull api web
 
@@ -274,7 +280,7 @@ jobs:
             exit 1
           fi
 
-          if ! docker compose -f docker-compose.deploy.yml up -d --no-build --no-deps api web; then
+          if ! docker compose -f docker-compose.deploy.yml up -d --no-build --no-deps --force-recreate api web; then
             echo "compose startup failed; recent container logs follow"
             docker compose -f docker-compose.deploy.yml ps || true
             docker compose -f docker-compose.deploy.yml logs --tail=100 db keycloak api web caddy || true
@@ -299,6 +305,32 @@ jobs:
             docker compose -f docker-compose.deploy.yml logs --tail=100 api web
             exit 1
           fi
+
+          expected_api_image="$api_image:$image_tag"
+          expected_web_image="$web_image:$image_tag"
+          actual_api_image="$(docker inspect --format '{{.Config.Image}}' crm-api)"
+          actual_web_image="$(docker inspect --format '{{.Config.Image}}' crm-web)"
+          if [ "$actual_api_image" != "$expected_api_image" ] || [ "$actual_web_image" != "$expected_web_image" ]; then
+            echo "running images do not match the selected release" >&2
+            printf 'expected api=%s web=%s\n' "$expected_api_image" "$expected_web_image" >&2
+            printf 'actual api=%s web=%s\n' "$actual_api_image" "$actual_web_image" >&2
+            exit 1
+          fi
+
+          # Keep the exact successfully deployed release reference on the
+          # server. Later manual `docker compose` commands then use the same
+          # CI-validated images instead of failing on missing variables or
+          # drifting to a mutable tag.
+          umask 077
+          env_tmp="$(mktemp .env.deploy.XXXXXX)"
+          sed '/^\(API_IMAGE\|WEB_IMAGE\|IMAGE_TAG\)=/d' .env > "$env_tmp"
+          {
+            printf '\n# Managed by GitHub Actions; last successfully deployed release.\n'
+            printf 'API_IMAGE=%s\n' "$api_image"
+            printf 'WEB_IMAGE=%s\n' "$web_image"
+            printf 'IMAGE_TAG=%s\n' "$image_tag"
+          } >> "$env_tmp"
+          mv "$env_tmp" .env
 
           # Monitoring services are not dependencies of the API. Start them
           # explicitly before Caddy so its reverse proxy can resolve grafana
