@@ -223,7 +223,7 @@ async def test_any_user_can_update_an_unassigned_interaction(session, client, ka
 
     listed = await client.get("/api/v1/interactions", headers=auth(kam_user))
     assert listed.status_code == 200
-    assert [item["id"] for item in listed.json()["items"]] == [str(interaction.id)]
+    assert listed.json()["items"] == []
 
     updated = await client.patch(
         f"/api/v1/interactions/{interaction.id}",

@@ -9,7 +9,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.access import AccessScope
-from app.core.errors import AccessDeniedError, ValidationError
+from app.core.errors import AccessDeniedError, NotFoundError, ValidationError
 from app.models.interaction import Interaction
 from app.repositories.interaction import InteractionRepository
 from app.repositories.university import UniversityRepository
@@ -121,7 +121,7 @@ class InteractionService:
         return await self.repo.reload(interaction)
 
     async def update(self, interaction_id: uuid.UUID, data: InteractionUpdate) -> Interaction:
-        interaction = await self.repo.get_or_fail(interaction_id)
+        interaction = await self._get_for_update(interaction_id)
         if not self.scope.is_privileged and interaction.responsible_user_id is not None:
             from app.services.audit import log_access_denied
 
@@ -162,6 +162,34 @@ class InteractionService:
             await self.session.commit()
         # A changed foreign key leaves the previously loaded relation stale.
         return await self.repo.reload(interaction)
+
+    async def _get_for_update(self, interaction_id: uuid.UUID) -> Interaction:
+        """Allow a user to claim an unassigned card without widening read scope."""
+        interaction = await self.repo.get(interaction_id, apply_access=True)
+        if interaction is not None:
+            return interaction
+
+        interaction = await self.repo.get(interaction_id, apply_access=False)
+        if interaction is None:
+            raise NotFoundError(
+                "Object not found",
+                details={"entity_type": Interaction.__tablename__, "id": str(interaction_id)},
+            )
+        if interaction.responsible_user_id is None:
+            return interaction
+
+        from app.services.audit import log_access_denied
+
+        await log_access_denied(
+            self.session,
+            entity_type=Interaction.__tablename__,
+            entity_id=interaction.id,
+            reason="out_of_scope",
+        )
+        raise AccessDeniedError(
+            "Interaction belongs to a university you are not assigned to",
+            details={"entity_type": Interaction.__tablename__, "id": str(interaction_id)},
+        )
 
     async def delete(self, interaction_id: uuid.UUID) -> None:
         interaction = await self.repo.get_or_fail(interaction_id)
