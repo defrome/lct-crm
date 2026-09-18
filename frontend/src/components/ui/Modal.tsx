@@ -122,7 +122,8 @@ export function ConfirmModal({
       size="sm"
       footer={
         <>
-          <Button variant="outline" onClick={onClose} disabled={loading}>
+          {/* Без variant — как «Отмена» во всех остальных модалках проекта. */}
+          <Button onClick={onClose} disabled={loading}>
             Отмена
           </Button>
           <Button variant={danger ? 'danger' : 'primary'} onClick={onConfirm} loading={loading}>

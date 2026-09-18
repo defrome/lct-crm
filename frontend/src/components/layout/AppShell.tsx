@@ -35,7 +35,7 @@ const WORK_NAV: NavItem[] = [
 const TOOL_NAV: NavItem[] = [
   { to: '/catalogs', label: 'Справочники', icon: 'catalog' },
   { to: '/workflows', label: 'Процессы', icon: 'route' },
-  { to: '/imports', label: 'Импорт', icon: 'import' },
+  { to: '/imports', label: 'Импорт', icon: 'import', role: 'manager' },
   { to: '/users', label: 'Сотрудники', icon: 'users', role: 'manager' },
   { to: '/audit', label: 'Журнал аудита', icon: 'audit', role: 'admin' },
 ];

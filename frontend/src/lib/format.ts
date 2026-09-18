@@ -114,10 +114,13 @@ export const ENTITY_LABELS: Record<string, string> = {
   it_products: 'ИТ-продукт',
   interactions: 'Взаимодействие',
   users: 'Сотрудник',
-  workflows: 'Workflow',
-  workflow_versions: 'Версия workflow',
-  workflow_stages: 'Этап',
-  workflow_transitions: 'Переход',
+  // «Процесс», а не «Workflow»: так этот объект называется во всём остальном
+  // интерфейсе (раздел «Процессы»), и журнал не должен быть единственным
+  // местом, где он вдруг по-английски.
+  workflows: 'Процесс',
+  workflow_versions: 'Версия процесса',
+  workflow_stages: 'Этап процесса',
+  workflow_transitions: 'Переход процесса',
   import_jobs: 'Задача импорта',
   attachments: 'Вложение',
   interaction_stage_history: 'Перемещение карточки',
@@ -125,6 +128,53 @@ export const ENTITY_LABELS: Record<string, string> = {
 
 export function entityLabel(entityType: string): string {
   return ENTITY_LABELS[entityType] ?? entityType;
+}
+
+/**
+ * Подписи полей в diff-е журнала аудита. Журнал открыт администратору — это
+ * технический специалист, а не разработчик, и читать `license_expires_at`
+ * ему приходится со схемой БД под рукой. Неизвестные поля отдаются как есть.
+ */
+export const FIELD_LABELS: Record<string, string> = {
+  name: 'Название',
+  short_name: 'Сокращение',
+  full_name: 'ФИО',
+  email: 'Email',
+  phone: 'Телефон',
+  position: 'Должность',
+  region: 'Регион',
+  inn: 'ИНН',
+  comment: 'Комментарий',
+  description: 'Описание',
+  is_active: 'Активен',
+  is_primary: 'Основной контакт',
+  role: 'Роль',
+  keycloak_id: 'Идентификатор Keycloak',
+  visibility_mode: 'Режим видимости',
+  contract_number: 'Номер договора',
+  transfer_status: 'Статус передачи',
+  license_signed_at: 'Лицензия подписана',
+  license_expires_at: 'Лицензия действует до',
+  license_years: 'Срок лицензии, лет',
+  university_id: 'Вуз',
+  it_direction_id: 'ИТ-направление',
+  it_product_id: 'ИТ-продукт',
+  vendor_id: 'Вендор',
+  responsible_user_id: 'Ответственный',
+  user_id: 'Сотрудник',
+  current_stage_id: 'Текущий этап',
+  workflow_version_id: 'Версия процесса',
+  from_stage_id: 'Этап «откуда»',
+  to_stage_id: 'Этап «куда»',
+  assigned_from: 'Закреплён с',
+  assigned_to: 'Закреплён по',
+  filename: 'Файл',
+  status: 'Статус',
+  deleted_at: 'Удалено',
+};
+
+export function fieldLabel(field: string): string {
+  return FIELD_LABELS[field] ?? field;
 }
 
 /**

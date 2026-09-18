@@ -101,8 +101,7 @@ export function LoginPage() {
                   autoComplete="username"
                   autoFocus
                   required
-                  icon="users"
-                  placeholder="например, kc-manager"
+                  placeholder="например, o.ivanova"
                 />
                 <TextInput
                   label="Пароль"

@@ -11,7 +11,13 @@ import { FilterBar, FilterSlot, PeriodFilter } from '@/components/ui/FilterBar';
 import { Icon } from '@/components/ui/Icon';
 import { EmptyState, ErrorState, PageHeader, Skeleton } from '@/components/ui/States';
 import { useFilters } from '@/hooks';
-import { AUDIT_LABELS, ENTITY_LABELS, entityLabel, formatDateTime } from '@/lib/format';
+import {
+  AUDIT_LABELS,
+  ENTITY_LABELS,
+  entityLabel,
+  fieldLabel,
+  formatDateTime,
+} from '@/lib/format';
 
 const ACTION_TONE: Record<AuditAction, Tone> = {
   create: 'success',
@@ -183,7 +189,9 @@ function AuditRow({ entry }: { entry: AuditLogRead }) {
             <dl className="flex flex-col gap-1.5">
               {changeKeys.map((key) => (
                 <div key={key} className="grid gap-1 text-desc sm:grid-cols-[10rem_1fr]">
-                  <dt className=" text-fg-muted">{key}</dt>
+                  <dt className="text-fg-muted" title={key}>
+                    {fieldLabel(key)}
+                  </dt>
                   <dd className="min-w-0 break-words text-fg">{renderChange(changes[key])}</dd>
                 </div>
               ))}

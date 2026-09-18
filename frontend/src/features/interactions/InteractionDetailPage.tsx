@@ -284,7 +284,12 @@ export function InteractionDetailPage() {
                     <Blank>не назначен</Blank>
                   )}
                 </DataRow>
-                <DataRow label="Статус по передаче">
+                {/*
+                  * «из каталога» в подписи — чтобы это поле не путали со
+                  * «статусом работы с вузом» в отчёте: там текущий этап
+                  * маршрута, здесь свободный текст, пришедший импортом.
+                  */}
+                <DataRow label="Статус передачи (из каталога)">
                   {record.transfer_status ?? <Blank />}
                 </DataRow>
                 <DataRow label="Обновлена" mono>

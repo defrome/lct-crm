@@ -75,11 +75,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className="animate-toast pointer-events-auto flex min-w-[280px] max-w-full items-center gap-3 rounded-l bg-neutral-990 px-4 py-3 text-body-s text-white shadow-bottom-xl"
+            className="animate-toast pointer-events-auto flex min-w-[280px] max-w-full items-center gap-3 rounded-l bg-inverse px-4 py-3 text-body-s text-on-inverse shadow-bottom-xl"
           >
             <span
               className={
-                'grid size-6 shrink-0 place-items-center self-start rounded-full ' +
+                /*
+                 * text-white здесь — не обход токенов: success и error одинаковы
+                 * в обеих темах, а on-inverse, который наследуется от плашки,
+                 * в тёмной теме тёмный и на зелёном кружке читался бы хуже.
+                 */
+                'grid size-6 shrink-0 place-items-center self-start rounded-full text-white ' +
                 (toast.tone === 'ok' ? 'bg-success' : 'bg-error')
               }
             >
@@ -91,9 +96,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             </span>
             <div className="min-w-0 flex-1">
               <p>{toast.title}</p>
-              {toast.detail && <p className="mt-0.5 text-white/70">{toast.detail}</p>}
+              {toast.detail && <p className="mt-0.5 text-on-inverse opacity-70">{toast.detail}</p>}
               {toast.requestId && (
-                <p className="tnum mt-0.5 text-desc text-white/50">
+                <p className="tnum mt-0.5 text-desc text-on-inverse opacity-50">
                   запрос {toast.requestId.slice(0, 8)}
                 </p>
               )}
@@ -101,7 +106,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             <button
               type="button"
               onClick={() => dismiss(toast.id)}
-              className="grid size-6 shrink-0 cursor-pointer place-items-center self-start rounded-s border-0 bg-transparent text-white/60 transition-colors hover:text-white"
+              className="grid size-6 shrink-0 cursor-pointer place-items-center self-start rounded-s border-0 bg-transparent text-on-inverse opacity-60 transition-opacity hover:opacity-100"
               aria-label="Закрыть уведомление"
             >
               <Icon name="close" className="size-4" />

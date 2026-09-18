@@ -160,26 +160,12 @@ export function ReportsPage() {
                 Сбросить отбор
               </Button>
             )}
-            <Button
-              variant="outline"
-              icon="file"
-              className="bg-card"
-              disabled={noRows}
-              loading={exporting.isPending && exporting.variables === 'pdf'}
-              onClick={() => exporting.mutate('pdf')}
-            >
-              PDF
-            </Button>
-            <Button
-              variant="outline"
-              icon="download"
-              className="bg-card"
-              disabled={noRows}
-              loading={exporting.isPending && exporting.variables === 'xls'}
-              onClick={() => exporting.mutate('xls')}
-            >
-              XLS
-            </Button>
+            {/*
+              * В шапке — только основной формат. PDF и XLS отсюда убраны: они
+              * дублировали карточку «Выгрузка», из-за чего было неясно, где
+              * выбирать формат, а CSV и JSON, которых в шапке никогда не было,
+              * выглядели несуществующими.
+              */}
             <Button
               variant="primary"
               icon="download"
@@ -269,10 +255,20 @@ export function ReportsPage() {
               {COLUMNS.map((column, index) => (
                 <div key={column.key}>
                   {index === 5 && <p className="cap mt-2 mb-3">Дополнительно</p>}
+                  {/*
+                    * Блокируется не «обязательная» колонка, а последняя
+                    * оставшаяся, какой бы она ни была: раньше «Наименование
+                    * вуза» то снималось, то нет, без всякого объяснения.
+                    */}
                   <Checkbox
                     label={column.title}
                     checked={selected.has(column.key)}
-                    disabled={column.required && selected.size === 1}
+                    disabled={selected.has(column.key) && selected.size === 1}
+                    hint={
+                      selected.has(column.key) && selected.size === 1
+                        ? 'В отчёте нужна хотя бы одна колонка'
+                        : undefined
+                    }
                     onChange={() => toggleColumn(column.key)}
                   />
                 </div>
@@ -281,7 +277,7 @@ export function ReportsPage() {
           </section>
 
           <section className="card card-pad">
-            <CardHeader title="Выгрузка" sub="Все строки под отбором, не только видимые" />
+            <CardHeader title="Выгрузка" sub="Любой из пяти форматов; все строки под отбором, не только видимые" />
             <div className="mt-5 flex flex-col gap-2">
               {EXPORTS.map((item) => (
                 <ExportButton

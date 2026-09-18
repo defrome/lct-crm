@@ -117,9 +117,35 @@ function Gate() {
         <Route path="workflows" element={<WorkflowsPage />} />
         <Route path="workflows/:id" element={<WorkflowDetailPage />} />
 
-        <Route path="imports" element={<ImportsPage />} />
-        <Route path="imports/new" element={<ImportWizardPage />} />
-        <Route path="imports/:jobId" element={<ImportWizardPage />} />
+        {/*
+         * Импорт целиком закрыт для КАМа: все мутирующие ручки бэкенда
+         * защищены require_manager, и без этой преграды пользователь проходил
+         * весь визард с разметкой колонок, чтобы получить 403 на последнем шаге.
+         */}
+        <Route
+          path="imports"
+          element={
+            <RequireRole role="manager">
+              <ImportsPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="imports/new"
+          element={
+            <RequireRole role="manager">
+              <ImportWizardPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="imports/:jobId"
+          element={
+            <RequireRole role="manager">
+              <ImportWizardPage />
+            </RequireRole>
+          }
+        />
 
         <Route
           path="users"

@@ -6,7 +6,9 @@ import { interactionsApi } from '@/api/endpoints';
 import type { InteractionRead, StageRead, TransitionRead } from '@/api/types';
 import { useToast } from '@/app/ToastProvider';
 import { Avatar, Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
+import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/States';
 import type { useStageLookup } from '@/features/workflows/useStageLookup';
 import { formatDate, licenseState, shortName } from '@/lib/format';
@@ -39,12 +41,15 @@ export function KanbanBoard({
   onOpen,
   onCreate,
   canEdit,
+  emptyHint,
 }: {
   rows: InteractionRead[];
   stages: ReturnType<typeof useStageLookup>;
   onOpen: (id: string) => void;
   onCreate?: () => void;
   canEdit: boolean;
+  /** Почему доска пуста и что с этим делать — текст зависит от роли. */
+  emptyHint?: string;
 }) {
   const toast = useToast();
   const client = useQueryClient();
@@ -57,6 +62,9 @@ export function KanbanBoard({
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [validKeys, setValidKeys] = useState<Set<string> | null>(null);
   const [overKey, setOverKey] = useState<string | null>(null);
+  // Карточка, для которой открыт выбор этапа: перетаскивание мышью — не
+  // единственный способ двигать работу, на планшете его попросту нет.
+  const [pickerRow, setPickerRow] = useState<InteractionRead | null>(null);
   const [confirmTarget, setConfirmTarget] = useState<{
     interactionId: string;
     stage: StageRead;
@@ -194,6 +202,25 @@ export function KanbanBoard({
     setOverKey(null);
   };
 
+  // Общий путь для перетаскивания и для выбора этапа из меню на карточке:
+  // оба способа должны одинаково спрашивать комментарий и одинаково рисовать
+  // оптимистичный перенос.
+  const applyTarget = (
+    row: InteractionRead,
+    target: { stage: StageRead; via: TransitionRead | 'start' },
+  ) => {
+    if (target.via !== 'start' && target.via.requires_comment) {
+      // Переходы с обязательным комментарием всё равно нельзя провести без
+      // диалога — API отклонит запрос без текста, поэтому карточку сразу
+      // спрашиваем, а не подвешиваем в «ничьей» колонке.
+      setConfirmTarget({ interactionId: row.id, stage: target.stage, transition: target.via });
+      return;
+    }
+
+    setPending((current) => new Map(current).set(row.id, target.stage.id));
+    commit.mutate({ id: row.id, to: target.stage, via: target.via });
+  };
+
   const onDrop = (event: React.DragEvent, column: BoardColumn) => {
     event.preventDefault();
     setOverKey(null);
@@ -204,16 +231,7 @@ export function KanbanBoard({
     const target = targetsFor(row).find((item) => item.stage.id === column.stage!.id);
     if (!target) return; // Колонка не входила в подсвеченные — второй барьер на случай гонки состояний.
 
-    if (target.via !== 'start' && target.via.requires_comment) {
-      // Переходы с обязательным комментарием всё равно нельзя провести без
-      // диалога — API отклонит запрос без текста, поэтому карточку сразу
-      // спрашиваем, а не подвешиваем в «ничьей» колонке.
-      setConfirmTarget({ interactionId: row.id, stage: target.stage, transition: target.via });
-      return;
-    }
-
-    setPending((current) => new Map(current).set(row.id, column.stage!.id));
-    commit.mutate({ id: row.id, to: target.stage, via: target.via });
+    applyTarget(row, target);
   };
 
   if (!primary) {
@@ -222,6 +240,25 @@ export function KanbanBoard({
         icon="route"
         title="Процесс не настроен"
         message="Опубликуйте версию workflow, чтобы вести карточки по этапам — пока канбан показать нечем."
+      />
+    );
+  }
+
+  // Ни одной карточки: колонки с «Нет карточек» сами по себе выглядят как
+  // сломанное приложение, поэтому причина объясняется над доской.
+  if (rows.length === 0) {
+    return (
+      <EmptyState
+        icon="cards"
+        title="Карточек пока нет"
+        message={emptyHint ?? 'Здесь появятся карточки, которые ведутся по этапам процесса.'}
+        action={
+          canEdit && onCreate ? (
+            <Button variant="primary" icon="plus" onClick={onCreate}>
+              Новая карточка
+            </Button>
+          ) : undefined
+        }
       />
     );
   }
@@ -272,6 +309,11 @@ export function KanbanBoard({
                     key={row.id}
                     row={row}
                     draggable={!column.readOnly && targetsFor(row).length > 0}
+                    onPick={
+                      !column.readOnly && targetsFor(row).length > 0
+                        ? () => setPickerRow(row)
+                        : undefined
+                    }
                     isMoving={pending.has(row.id)}
                     onDragStart={(event) => onDragStart(event, row)}
                     onDragEnd={onDragEnd}
@@ -306,6 +348,51 @@ export function KanbanBoard({
         })}
       </div>
 
+      <Modal
+        open={pickerRow !== null}
+        onClose={() => setPickerRow(null)}
+        title="Перевести на другой этап"
+        description={
+          pickerRow
+            ? `${pickerRow.university?.name ?? 'Карточка'} · ${
+                stageAt(pickerRow)
+                  ? (orderedStages.find((stage) => stage.id === stageAt(pickerRow!))?.name ??
+                    'текущий этап')
+                  : 'ещё не на маршруте'
+              }`
+            : undefined
+        }
+        footer={<Button onClick={() => setPickerRow(null)}>Отмена</Button>}
+      >
+        <ul className="flex flex-col gap-2">
+          {(pickerRow ? targetsFor(pickerRow) : []).map((target) => (
+            <li key={target.stage.id}>
+              <button
+                type="button"
+                onClick={() => {
+                  const row = pickerRow!;
+                  setPickerRow(null);
+                  applyTarget(row, target);
+                }}
+                className="flex w-full cursor-pointer items-center gap-3 rounded-l border-0 bg-surface-3 px-3 py-2.5 text-left transition-colors hover:bg-accent-container"
+              >
+                {target.stage.code && (
+                  <span className="tnum shrink-0 text-desc font-medium text-fg-muted">
+                    {target.stage.code}
+                  </span>
+                )}
+                <span className="min-w-0 flex-1 truncate text-body-s text-fg">
+                  {target.stage.name}
+                </span>
+                {target.via !== 'start' && target.via.requires_comment && (
+                  <span className="shrink-0 text-desc text-fg-muted">нужен комментарий</span>
+                )}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </Modal>
+
       <TransitionModal
         interactionId={confirmTarget?.interactionId ?? ''}
         target={confirmTarget ? { stage: confirmTarget.stage, transition: confirmTarget.transition } : null}
@@ -318,6 +405,7 @@ export function KanbanBoard({
 function KanbanCard({
   row,
   draggable,
+  onPick,
   isMoving,
   onDragStart,
   onDragEnd,
@@ -325,6 +413,8 @@ function KanbanCard({
 }: {
   row: InteractionRead;
   draggable: boolean;
+  /** Перевести этап без перетаскивания. Не задан — переходов нет. */
+  onPick?: () => void;
   isMoving: boolean;
   onDragStart: (event: React.DragEvent) => void;
   onDragEnd: () => void;
@@ -350,11 +440,19 @@ function KanbanCard({
         ) : (
           <span className="tnum text-desc text-fg-muted">{row.contract_number ?? '—'}</span>
         )}
-        {draggable && (
-          <Icon
-            name="more"
-            className="size-4 shrink-0 text-fg-muted opacity-0 transition-opacity group-hover:opacity-100"
-          />
+        {onPick && (
+          <button
+            type="button"
+            aria-label="Перевести на другой этап"
+            title="Перевести на другой этап"
+            onClick={(event) => {
+              event.stopPropagation(); // клик по карточке открывает её — здесь это не нужно
+              onPick();
+            }}
+            className="grid size-6 shrink-0 cursor-pointer place-items-center rounded-s border-0 bg-transparent text-fg-muted transition-colors hover:text-fg focus-visible:opacity-100 md:opacity-0 md:group-hover:opacity-100"
+          >
+            <Icon name="more" className="size-4" />
+          </button>
         )}
       </div>
 

@@ -10,6 +10,7 @@ import { CategoryBars, ChartCard, SequenceBars, StatTile, type Datum } from '@/c
 import { Page } from '@/components/layout/AppShell';
 import { Avatar, Badge, Progress } from '@/components/ui/Badge';
 import { Button, ChipStatic, IconButton } from '@/components/ui/Button';
+import { plural } from '@/components/ui/DataTable';
 import { CardHeader, EmptyState, ErrorState, PageHeader, Skeleton } from '@/components/ui/States';
 import { useStageLookup, type StageInfo } from '@/features/workflows/useStageLookup';
 import { exportChartPng } from '@/lib/exportChart';
@@ -121,7 +122,8 @@ export function DashboardPage() {
               <>
                 {stats.onRoute} на маршруте
                 <br />
-                {universities.data?.total ?? '—'} вузов в справочнике
+                {universities.data?.total ?? '—'}{' '}
+                {plural(universities.data?.total ?? 0, ['вуз', 'вуза', 'вузов'])} в справочнике
               </>
             }
             onClick={() => navigate('/interactions')}
@@ -154,7 +156,8 @@ export function DashboardPage() {
                 <span className="tnum text-right text-desc text-fg-muted">
                   С лицензией
                   <br />
-                  <b className="font-medium text-fg">{stats.withLicense}</b> карточек
+                  <b className="font-medium text-fg">{stats.withLicense}</b>{' '}
+                  {plural(stats.withLicense, ['карточка', 'карточки', 'карточек'])}
                 </span>
               </div>
               <Progress
@@ -213,7 +216,9 @@ export function DashboardPage() {
                   : 'Карточки ещё не поставлены на маршрут'}
               </p>
               <div className="mt-auto flex flex-wrap items-start gap-2 pt-6 lg:flex-col">
-                <ChipStatic className="tnum">{emptyStages} этапов без карточек</ChipStatic>
+                <ChipStatic className="tnum">
+                  {emptyStages} {plural(emptyStages, ['этап', 'этапа', 'этапов'])} без карточек
+                </ChipStatic>
                 <ChipStatic className="max-w-full" title={stages.primary?.workflow.name}>
                   <span className="truncate">
                     {stages.primary?.workflow.name ?? 'Процесс не настроен'}
