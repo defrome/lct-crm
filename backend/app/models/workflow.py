@@ -281,6 +281,7 @@ class WorkflowAttachment(DomainBase):
     content_type: Mapped[str] = mapped_column(sa.Text, nullable=False)
     size_bytes: Mapped[int] = mapped_column(sa.BigInteger, nullable=False)
     file_hash: Mapped[str] = mapped_column(sa.Text, nullable=False)
+    storage_key: Mapped[str | None] = mapped_column(sa.Text, default=None)
     comment: Mapped[str | None] = mapped_column(sa.Text, default=None)
 
     stage: Mapped[WorkflowStage] = relationship(lazy="selectin")
@@ -295,11 +296,8 @@ class WorkflowAttachment(DomainBase):
 class WorkflowAttachmentBlob(Base):
     """File bytes, kept out of the metadata table.
 
-    Stored in the database rather than on a volume or in object storage: it is
-    the conservative option for a system under 152-ФЗ — one place to protect,
-    one backup that cannot fall out of sync with its metadata, and no extra
-    infrastructure to secure. Split into its own table so listing attachments
-    never drags megabytes along.
+    Legacy bytes uploaded before MinIO was introduced. New uploads are stored
+    in object storage; this mapping remains so existing files stay readable.
     """
 
     __tablename__ = "workflow_attachment_blobs"

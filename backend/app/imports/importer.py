@@ -64,6 +64,7 @@ from app.services.catalogs import (
     VendorService,
 )
 from app.services.interactions import InteractionService
+from app.services.object_storage import ObjectStorage, get_object_storage
 from app.services.text import clean_text, normalize_name, normalize_person_name, split_multi_value
 from app.services.users import UserService
 
@@ -95,7 +96,12 @@ def _empty_stats() -> dict[str, int]:
 
 
 class ImportService:
-    def __init__(self, session: AsyncSession, scope: AccessScope | None = None) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        scope: AccessScope | None = None,
+        storage: ObjectStorage | None = None,
+    ) -> None:
         self.session = session
         self.scope = scope or AccessScope.system()
         self.jobs = ImportJobRepository(session, self.scope)
@@ -109,6 +115,7 @@ class ImportService:
         self.contacts = UniversityContactService(session, self.scope)
         self.interactions = InteractionService(session, self.scope)
         self.users = UserService(session, self.scope)
+        self.storage = storage or get_object_storage()
 
     # -- step 1: upload -----------------------------------------------------
 
@@ -143,6 +150,7 @@ class ImportService:
         )
         self.jobs.add(job)
         await self.session.flush()
+        job.storage_key = f"imports/{job.id}"
 
         for raw in parsed.rows:
             self.session.add(
@@ -156,7 +164,13 @@ class ImportService:
                 )
             )
         await self.session.flush()
-        await self.session.commit()
+        try:
+            await self.storage.put(job.storage_key, content, "application/octet-stream")
+            await self.session.commit()
+        except Exception:
+            await self.session.rollback()
+            await self.storage.delete(job.storage_key)
+            raise
 
         return {
             "job": job,

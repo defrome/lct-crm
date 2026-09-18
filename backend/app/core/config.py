@@ -78,9 +78,16 @@ class Settings(BaseSettings):
     # misbehaving upstream away.
     integrations_page_limit: int = 100
 
+    # --- Object storage ----------------------------------------------------
+    object_storage_backend: Literal["minio", "memory"] = "minio"
+    minio_endpoint: str = "localhost:9000"
+    minio_access_key: str = "minioadmin"
+    minio_secret_key: str = "minioadmin"
+    minio_secure: bool = False
+    minio_bucket: str = "crm-files"
+
     # --- Attachments -------------------------------------------------------
-    # Stage attachments (FR-04). Stored in the database, so the cap also bounds
-    # how large a single row can get.
+    # Stage attachments (FR-04), stored in object storage.
     attachment_max_file_size: int = 25 * 1024 * 1024  # 25 MiB
 
     # --- Pagination --------------------------------------------------------
@@ -119,6 +126,8 @@ class Settings(BaseSettings):
             )
         if self.auth_mode == "keycloak" and not self.keycloak_issuer:
             raise ValueError("AUTH_MODE=keycloak requires KEYCLOAK_ISSUER to be set")
+        if self.env == "production" and self.object_storage_backend != "minio":
+            raise ValueError("OBJECT_STORAGE_BACKEND=memory is forbidden when ENV=production")
         return self
 
 

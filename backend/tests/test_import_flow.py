@@ -69,6 +69,19 @@ async def test_full_cycle_creates_every_entity(session):
     assert set(contacts) == {"Соколова Анна", "Орлов Дмитрий"}
 
 
+async def test_upload_is_stored_with_an_object_key(session):
+    content = make_xlsx([catalog_row("MGTU")])
+    service = ImportService(session, AccessScope.system())
+
+    created = await service.create_job(
+        filename="catalog.xlsx", content=content, target=ImportTarget.INTERACTIONS
+    )
+    job = created["job"]
+
+    assert job.storage_key is not None
+    assert await service.storage.get(job.storage_key) == content
+
+
 async def test_repeated_import_creates_no_duplicates(session):
     """SPEC §11: re-uploading the same file must be idempotent."""
     content = make_xlsx(

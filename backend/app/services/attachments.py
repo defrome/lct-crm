@@ -25,16 +25,23 @@ from app.repositories.interaction import InteractionRepository
 from app.repositories.workflow import WorkflowAttachmentRepository, WorkflowStageRepository
 from app.services.audit import log_export
 from app.services.file_types import detect_attachment_format
+from app.services.object_storage import ObjectStorage, get_object_storage
 from app.services.text import clean_text
 
 
 class AttachmentService:
-    def __init__(self, session: AsyncSession, scope: AccessScope | None = None) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        scope: AccessScope | None = None,
+        storage: ObjectStorage | None = None,
+    ) -> None:
         self.session = session
         self.scope = scope or AccessScope.system()
         self.repo = WorkflowAttachmentRepository(session, self.scope)
         self.interactions = InteractionRepository(session, self.scope)
         self.stages = WorkflowStageRepository(session, self.scope)
+        self.storage = storage or get_object_storage()
 
     async def list_for_interaction(
         self,
@@ -104,8 +111,15 @@ class AttachmentService:
         )
         self.repo.add(attachment)
         await self.session.flush()
-        await self.repo.store_blob(attachment.id, content)
-        await self.session.commit()
+        storage_key = f"attachments/{attachment.id}"
+        attachment.storage_key = storage_key
+        try:
+            await self.storage.put(storage_key, content, content_type)
+            await self.session.commit()
+        except Exception:
+            await self.session.rollback()
+            await self.storage.delete(storage_key)
+            raise
         return await self.repo.reload(attachment)
 
     async def get(self, attachment_id: uuid.UUID) -> WorkflowAttachment:
@@ -113,7 +127,11 @@ class AttachmentService:
 
     async def download(self, attachment_id: uuid.UUID) -> tuple[WorkflowAttachment, bytes]:
         attachment = await self.repo.get_or_fail(attachment_id)
-        data = await self.repo.read_blob(attachment_id)
+        data = (
+            await self.storage.get(attachment.storage_key)
+            if attachment.storage_key is not None
+            else await self.repo.read_blob(attachment_id)
+        )
         if data is None:
             raise NotFoundError(
                 "Содержимое файла не найдено", details={"attachment_id": str(attachment_id)}

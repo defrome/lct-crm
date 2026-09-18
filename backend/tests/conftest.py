@@ -25,6 +25,7 @@ os.environ.setdefault("POSTGRES_HOST", os.environ.get("TEST_POSTGRES_HOST", "loc
 os.environ.setdefault("POSTGRES_PORT", os.environ.get("TEST_POSTGRES_PORT", "5432"))
 os.environ.setdefault("ENV", "local")
 os.environ.setdefault("AUTH_MODE", "dev")
+os.environ.setdefault("OBJECT_STORAGE_BACKEND", "memory")
 
 import pytest  # noqa: E402
 import sqlalchemy as sa  # noqa: E402
