@@ -236,6 +236,10 @@ async def publish_version(
     "/{workflow_id}/versions/{version_id}/migration-preview",
     response_model=MigrationPreview,
     summary="Предварительный просмотр миграции карточек",
+    description=(
+        "Показывает карточки, затрагиваемые публикацией новой версии, и этапы, для которых "
+        "нужно указать сопоставление перед подтверждением миграции."
+    ),
     responses=STRUCTURE_ERRORS,
 )
 async def migration_preview(
