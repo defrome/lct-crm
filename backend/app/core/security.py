@@ -31,7 +31,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.db import get_session
-from app.core.errors import AccessDeniedError
+from app.core.errors import AccessDeniedError, AuthenticationError
 from app.models.enums import UserRole, UserVisibilityMode
 from app.models.user import User
 from app.services.text import normalize_name
@@ -95,7 +95,7 @@ def _role_from_claims(claims: dict[str, Any]) -> UserRole:
 
 async def _decode_keycloak_token(token: str) -> dict[str, Any]:
     if not settings.keycloak_jwks_url:
-        raise AccessDeniedError("Проверка токена невозможна: не настроен KEYCLOAK_JWKS_URL")
+        raise AuthenticationError("Проверка токена невозможна: не настроен KEYCLOAK_JWKS_URL")
     # Compose keeps the optional setting present as an empty environment
     # value. Treat blank strings as disabled; otherwise python-jose enables
     # audience validation and rejects tokens without a configured audience.
@@ -113,7 +113,7 @@ async def _decode_keycloak_token(token: str) -> dict[str, Any]:
         )
     except (JWTError, httpx.HTTPError) as exc:
         logger.warning("token verification failed: %s", exc)
-        raise AccessDeniedError("Токен доступа недействителен") from None
+        raise AuthenticationError("Токен доступа недействителен") from None
     return claims
 
 
@@ -212,12 +212,12 @@ async def _keycloak_user(request: Request, session: AsyncSession) -> CurrentUser
     header = request.headers.get("Authorization", "")
     scheme, _, token = header.partition(" ")
     if scheme.lower() != "bearer" or not token:
-        raise AccessDeniedError("Требуется Bearer-токен в заголовке Authorization")
+        raise AuthenticationError("Требуется Bearer-токен в заголовке Authorization")
 
     claims = await _decode_keycloak_token(token)
     keycloak_id = claims.get("sub")
     if not keycloak_id:
-        raise AccessDeniedError("В токене отсутствует обязательный claim `sub`")
+        raise AuthenticationError("В токене отсутствует обязательный claim `sub`")
 
     full_name = (
         claims.get("name")

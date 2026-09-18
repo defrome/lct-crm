@@ -5,6 +5,7 @@ from __future__ import annotations
 import uuid
 
 from app.core.access import AccessScope
+from app.core.config import settings
 from app.schemas.university import UniversityCreate
 from app.services.catalogs import UniversityService
 from tests.conftest import auth
@@ -38,6 +39,15 @@ async def test_bad_debug_user_is_access_denied(client):
         "/api/v1/universities", headers={"X-Debug-User": "nobody@example.test"}
     )
     assert response.status_code == 403
+    assert response.json()["error"]["code"] == "ACCESS_DENIED"
+
+
+async def test_keycloak_request_without_bearer_token_requires_reauthentication(client, monkeypatch):
+    monkeypatch.setattr(settings, "auth_mode", "keycloak")
+
+    response = await client.get("/api/v1/universities")
+
+    assert response.status_code == 401
     assert response.json()["error"]["code"] == "ACCESS_DENIED"
 
 

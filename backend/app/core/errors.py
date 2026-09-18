@@ -67,6 +67,14 @@ class AccessDeniedError(AppError):
     message = "Доступ к объекту запрещён"
 
 
+class AuthenticationError(AppError):
+    """The caller must obtain a valid access token before retrying the request."""
+
+    code = ErrorCode.ACCESS_DENIED
+    http_status = 401
+    message = "Требуется аутентификация"
+
+
 class DuplicateEntityError(AppError):
     code = ErrorCode.DUPLICATE_ENTITY
     http_status = 409
