@@ -227,6 +227,45 @@ function ProductsTab() {
             onRetry={() => void refetch()}
             sort={values.sort}
             onSortChange={(sort) => set({ sort: sort ?? '' })}
+            renderCard={(row) => (
+              <div className="flex items-start justify-between gap-3">
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-body-s font-medium text-fg">{row.name}</span>
+                  {row.description && (
+                    <span className="block truncate text-desc text-fg-muted">
+                      {row.description}
+                    </span>
+                  )}
+                  <span className="mt-1.5 flex flex-wrap items-center gap-1">
+                    {row.vendor && <Badge>{row.vendor.name}</Badge>}
+                    {row.directions?.map((direction) => (
+                      <Badge key={direction.id}>{direction.name}</Badge>
+                    ))}
+                    <Badge tone={row.is_active ? 'success' : undefined}>
+                      {row.is_active ? 'активен' : 'архив'}
+                    </Badge>
+                  </span>
+                </span>
+                {can('manager') && (
+                  <span className="flex shrink-0 gap-1">
+                    <IconButton
+                      icon="edit"
+                      label={`Изменить ${row.name}`}
+                      size="m"
+                      onClick={() => setEditing(row)}
+                    />
+                    {can('admin') && (
+                      <IconButton
+                        icon="trash"
+                        label={`Удалить ${row.name}`}
+                        size="m"
+                        onClick={() => setRemoving(row)}
+                      />
+                    )}
+                  </span>
+                )}
+              </div>
+            )}
             empty={
               <EmptyState
                 icon="catalog"
@@ -473,6 +512,39 @@ function DirectionsTab() {
             onRetry={() => void refetch()}
             sort={values.sort}
             onSortChange={(sort) => set({ sort: sort ?? '' })}
+            renderCard={(row) => (
+              <div className="flex items-start justify-between gap-3">
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-body-s font-medium text-fg">{row.name}</span>
+                  {row.description && (
+                    <span className="block truncate text-desc text-fg-muted">
+                      {row.description}
+                    </span>
+                  )}
+                  <Badge tone={row.is_active ? 'success' : undefined} className="mt-1.5">
+                    {row.is_active ? 'активно' : 'архив'}
+                  </Badge>
+                </span>
+                {can('manager') && (
+                  <span className="flex shrink-0 gap-1">
+                    <IconButton
+                      icon="edit"
+                      label={`Изменить ${row.name}`}
+                      size="m"
+                      onClick={() => setEditing(row)}
+                    />
+                    {can('admin') && (
+                      <IconButton
+                        icon="trash"
+                        label={`Удалить ${row.name}`}
+                        size="m"
+                        onClick={() => setRemoving(row)}
+                      />
+                    )}
+                  </span>
+                )}
+              </div>
+            )}
             empty={
               <EmptyState
                 icon="catalog"
@@ -588,6 +660,29 @@ function VendorsTab() {
             onRetry={() => void refetch()}
             sort={values.sort}
             onSortChange={(sort) => set({ sort: sort ?? '' })}
+            renderCard={(row) => (
+              <div className="flex items-center justify-between gap-3">
+                <span className="truncate text-body-s font-medium text-fg">{row.name}</span>
+                {can('manager') && (
+                  <span className="flex shrink-0 gap-1">
+                    <IconButton
+                      icon="edit"
+                      label={`Изменить ${row.name}`}
+                      size="m"
+                      onClick={() => setEditing(row)}
+                    />
+                    {can('admin') && (
+                      <IconButton
+                        icon="trash"
+                        label={`Удалить ${row.name}`}
+                        size="m"
+                        onClick={() => setRemoving(row)}
+                      />
+                    )}
+                  </span>
+                )}
+              </div>
+            )}
             empty={
               <EmptyState
                 icon="catalog"
@@ -723,6 +818,38 @@ function ContactsTab() {
           sort={values.sort}
           onSortChange={(sort) => set({ sort: sort ?? '' })}
           onRowClick={(row) => navigate(`/universities/${row.university_id}`)}
+          renderCard={(row) => (
+            <div className="flex flex-col gap-1">
+              <span className="flex items-center justify-between gap-2">
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-body-s font-medium text-fg">
+                    {row.full_name}
+                  </span>
+                  {row.position && (
+                    <span className="block truncate text-desc text-fg-muted">{row.position}</span>
+                  )}
+                </span>
+                {row.is_primary && (
+                  <Badge tone="s01">
+                    <Icon name="flag" className="size-3.5" />
+                    основной
+                  </Badge>
+                )}
+              </span>
+              <span className="flex flex-wrap items-center gap-x-3 text-desc">
+                {row.email && (
+                  <a
+                    href={`mailto:${row.email}`}
+                    onClick={(event) => event.stopPropagation()}
+                    className="text-accent hover:underline"
+                  >
+                    {row.email}
+                  </a>
+                )}
+                {row.phone && <span className="tnum text-fg-soft">{row.phone}</span>}
+              </span>
+            </div>
+          )}
           empty={
             <EmptyState
               icon="users"

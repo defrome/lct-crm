@@ -207,7 +207,10 @@ export function ReportsPage() {
       </div>
 
       <div className="grid items-start gap-3 lg:gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-        <div className="flex flex-col gap-3 lg:gap-4">
+        {/* min-w-0: без него grid-колонка растёт по max-content первой карточки
+            и обрезается — на 390px правые ~85px «Отбор/Колонки/Выгрузка» были
+            невидимо срезаны overflow-x:clip на body. */}
+        <div className="flex min-w-0 flex-col gap-3 lg:gap-4">
           <section className="card card-pad">
             <CardHeader title="Отбор" sub="Применяется сразу" />
             <div className="mt-5 flex flex-col gap-3">
