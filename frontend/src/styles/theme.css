@@ -488,6 +488,56 @@
     }
   }
 
+  /*
+   * Тач-цели ≥44×44 (мобильная адаптация, п. 3 плана). Только на touch-вводе
+   * (pointer: coarse) — плотная десктопная вёрстка с мышью не меняется ни на
+   * пиксель. Расширяем зону нажатия невидимым ::before, а не видимый размер:
+   * это официально принятая WCAG 2.5.8-техника, она не раздувает плотные
+   * ряды таблиц/панелей и не задевает встроенные в текст mailto/tel-ссылки
+   * (`nav a` / `aside a` / `header a` — навигационные и заголовочные ссылки;
+   * ссылки в абзацах и ячейках таблиц вне этих контейнеров не затронуты).
+   * `<select>` — нативный контрол, ::before на нём не рендерится, поэтому
+   * увеличиваем реальный min-height. Чекбокс — тем же приёмом на span-обёртке
+   * из Field.tsx через :has(), сам квадрат остаётся 20px.
+   */
+  @media (pointer: coarse) {
+    button:not(:disabled),
+    nav a,
+    aside a,
+    header a {
+      position: relative;
+    }
+
+    button:not(:disabled)::before,
+    nav a::before,
+    aside a::before,
+    header a::before {
+      content: '';
+      position: absolute;
+      inset: 50% auto auto 50%;
+      width: max(100%, 44px);
+      height: max(100%, 44px);
+      transform: translate(-50%, -50%);
+    }
+
+    select {
+      min-height: 44px;
+    }
+
+    span:has(> input[type='checkbox']) {
+      position: relative;
+    }
+
+    span:has(> input[type='checkbox'])::before {
+      content: '';
+      position: absolute;
+      inset: 50% auto auto 50%;
+      width: 44px;
+      height: 44px;
+      transform: translate(-50%, -50%);
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
