@@ -200,6 +200,13 @@ class RouteService:
             )
         )
         await self.session.flush()
+        # Outbox rows are created in the same transaction, while actual channel
+        # delivery is intentionally performed later and can never roll back a move.
+        from app.services.communications import CommunicationService
+
+        await CommunicationService(self.session, self.scope).enqueue_transition(
+            interaction, transition.id
+        )
         await self.session.commit()
         return await self.interactions.reload(interaction)
 

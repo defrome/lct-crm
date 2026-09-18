@@ -7125,10 +7125,473 @@
           }
         }
       }
+    },
+    "/api/v1/notification-rules": {
+      "get": {
+        "tags": [
+          "Коммуникации и обучение"
+        ],
+        "summary": "Rules",
+        "operationId": "rules_api_v1_notification_rules_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/NotificationRuleRead"
+                  },
+                  "type": "array",
+                  "title": "Response Rules Api V1 Notification Rules Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Коммуникации и обучение"
+        ],
+        "summary": "Create Rule",
+        "operationId": "create_rule_api_v1_notification_rules_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationRuleCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationRuleRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/run-stalled": {
+      "post": {
+        "tags": [
+          "Коммуникации и обучение"
+        ],
+        "summary": "Run Stalled",
+        "operationId": "run_stalled_api_v1_notifications_run_stalled_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "integer"
+                  },
+                  "type": "object",
+                  "title": "Response Run Stalled Api V1 Notifications Run Stalled Post"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/deliver": {
+      "post": {
+        "tags": [
+          "Коммуникации и обучение"
+        ],
+        "summary": "Deliver",
+        "operationId": "deliver_api_v1_notifications_deliver_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "integer"
+                  },
+                  "type": "object",
+                  "title": "Response Deliver Api V1 Notifications Deliver Post"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interactions/{interaction_id}/messages": {
+      "get": {
+        "tags": [
+          "Коммуникации и обучение"
+        ],
+        "summary": "Messages",
+        "operationId": "messages_api_v1_interactions__interaction_id__messages_get",
+        "parameters": [
+          {
+            "name": "interaction_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Interaction Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ChatMessageRead"
+                  },
+                  "title": "Response Messages Api V1 Interactions  Interaction Id  Messages Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Коммуникации и обучение"
+        ],
+        "summary": "Message",
+        "operationId": "message_api_v1_interactions__interaction_id__messages_post",
+        "parameters": [
+          {
+            "name": "interaction_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Interaction Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatMessageCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatMessageRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/education/participants": {
+      "get": {
+        "tags": [
+          "Коммуникации и обучение"
+        ],
+        "summary": "Participants",
+        "operationId": "participants_api_v1_education_participants_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ParticipantRead"
+                  },
+                  "type": "array",
+                  "title": "Response Participants Api V1 Education Participants Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Коммуникации и обучение"
+        ],
+        "summary": "Participant",
+        "operationId": "participant_api_v1_education_participants_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParticipantCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParticipantRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/education/activities": {
+      "get": {
+        "tags": [
+          "Коммуникации и обучение"
+        ],
+        "summary": "Activities",
+        "operationId": "activities_api_v1_education_activities_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ActivityRead"
+                  },
+                  "type": "array",
+                  "title": "Response Activities Api V1 Education Activities Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Коммуникации и обучение"
+        ],
+        "summary": "Activity",
+        "operationId": "activity_api_v1_education_activities_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivityCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "ActivityCreate": {
+        "properties": {
+          "university_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "University Id"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "federal_project": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Federal Project"
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At"
+          },
+          "ends_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ends At"
+          },
+          "participant_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Participant Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "starts_at",
+          "ends_at"
+        ],
+        "title": "ActivityCreate"
+      },
+      "ActivityRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "university_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "University Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "federal_project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Federal Project"
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At"
+          },
+          "ends_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ends At"
+          },
+          "participants": {
+            "items": {
+              "$ref": "#/components/schemas/ParticipantRead"
+            },
+            "type": "array",
+            "title": "Participants"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "university_id",
+          "name",
+          "federal_project",
+          "starts_at",
+          "ends_at",
+          "participants"
+        ],
+        "title": "ActivityRead"
+      },
       "AssignmentCreate": {
         "properties": {
           "user_id": {
@@ -7465,7 +7928,7 @@
         "properties": {
           "file": {
             "type": "string",
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "File",
             "description": "Файл одного из десяти допустимых форматов"
           },
@@ -7492,7 +7955,7 @@
         "properties": {
           "file": {
             "type": "string",
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "File",
             "description": "Файл каталога .xlsx или .xls"
           },
@@ -7515,6 +7978,62 @@
           "pdf"
         ],
         "title": "ChartFormat"
+      },
+      "ChatMessageCreate": {
+        "properties": {
+          "body": {
+            "type": "string",
+            "maxLength": 5000,
+            "minLength": 1,
+            "title": "Body"
+          }
+        },
+        "type": "object",
+        "required": [
+          "body"
+        ],
+        "title": "ChatMessageCreate"
+      },
+      "ChatMessageRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "interaction_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Interaction Id"
+          },
+          "author_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Author Id"
+          },
+          "author": {
+            "$ref": "#/components/schemas/UserShort"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "interaction_id",
+          "author_id",
+          "author",
+          "body",
+          "created_at"
+        ],
+        "title": "ChatMessageRead"
       },
       "ContactCreate": {
         "properties": {
@@ -9074,6 +9593,147 @@
         "type": "object",
         "title": "MigrationPreviewRequest"
       },
+      "NotificationRuleCreate": {
+        "properties": {
+          "workflow_transition_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflow Transition Id"
+          },
+          "stale_after_days": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stale After Days"
+          },
+          "recipient_kind": {
+            "type": "string",
+            "title": "Recipient Kind"
+          },
+          "recipient_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipient Role"
+          },
+          "recipient_user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipient User Id"
+          },
+          "channel": {
+            "type": "string",
+            "title": "Channel"
+          }
+        },
+        "type": "object",
+        "required": [
+          "recipient_kind",
+          "channel"
+        ],
+        "title": "NotificationRuleCreate"
+      },
+      "NotificationRuleRead": {
+        "properties": {
+          "workflow_transition_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflow Transition Id"
+          },
+          "stale_after_days": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stale After Days"
+          },
+          "recipient_kind": {
+            "type": "string",
+            "title": "Recipient Kind"
+          },
+          "recipient_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipient Role"
+          },
+          "recipient_user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipient User Id"
+          },
+          "channel": {
+            "type": "string",
+            "title": "Channel"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "is_enabled": {
+            "type": "boolean",
+            "title": "Is Enabled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "recipient_kind",
+          "channel",
+          "id",
+          "is_enabled"
+        ],
+        "title": "NotificationRuleRead"
+      },
       "Page_AssignmentRead_": {
         "properties": {
           "items": {
@@ -9673,6 +10333,88 @@
           "pages"
         ],
         "title": "Page[WorkflowRead]"
+      },
+      "ParticipantCreate": {
+        "properties": {
+          "university_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "University Id"
+          },
+          "full_name": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Full Name"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 320
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          }
+        },
+        "type": "object",
+        "required": [
+          "university_id",
+          "full_name",
+          "kind"
+        ],
+        "title": "ParticipantCreate"
+      },
+      "ParticipantRead": {
+        "properties": {
+          "university_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "University Id"
+          },
+          "full_name": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Full Name"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 320
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "university_id",
+          "full_name",
+          "kind",
+          "id"
+        ],
+        "title": "ParticipantRead"
       },
       "PresetCreate": {
         "properties": {
@@ -11390,6 +12132,13 @@
           "type": {
             "type": "string",
             "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
           }
         },
         "type": "object",

@@ -98,6 +98,7 @@ class Settings(BaseSettings):
     feature_external_channels_enabled: bool = False
     feature_chat_enabled: bool = False
     feature_cache_enabled: bool = False
+    notifications_poll_seconds: int = 60
 
     # --- Attachments -------------------------------------------------------
     # Stage attachments (FR-04), stored in object storage.
@@ -143,6 +144,8 @@ class Settings(BaseSettings):
             raise ValueError("OBJECT_STORAGE_BACKEND=memory is forbidden when ENV=production")
         if self.cache_ttl_seconds < 1:
             raise ValueError("CACHE_TTL_SECONDS must be at least 1")
+        if self.notifications_poll_seconds < 10:
+            raise ValueError("NOTIFICATIONS_POLL_SECONDS must be at least 10")
         return self
 
 
