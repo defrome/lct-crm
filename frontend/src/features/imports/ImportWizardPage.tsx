@@ -36,9 +36,14 @@ const STEPS: { step: Step; label: string }[] = [
 ];
 
 /** Where a job sits in the five-step flow, derived from its status. */
-function stepForJob(job: ImportJobRead | undefined, mappingConfirmed: boolean): Step {
+function stepForJob(
+  job: ImportJobRead | undefined,
+  mappingConfirmed: boolean,
+  editingMapping: boolean,
+): Step {
   if (!job) return 1;
   if (job.status === 'committed') return 5;
+  if (editingMapping) return 2;
   if (job.status === 'validated') return 3;
   return mappingConfirmed ? 3 : 2;
 }
@@ -47,9 +52,10 @@ export function ImportWizardPage() {
   const { jobId } = useParams<{ jobId?: string }>();
   const job = useImportJob(jobId);
   const [mappingConfirmed, setMappingConfirmed] = useState(false);
+  const [editingMapping, setEditingMapping] = useState(false);
   const [upload, setUpload] = useState<ImportJobCreated | null>(null);
 
-  const step = jobId ? stepForJob(job.data, mappingConfirmed) : 1;
+  const step = jobId ? stepForJob(job.data, mappingConfirmed, editingMapping) : 1;
 
   if (job.error) {
     return (
@@ -81,14 +87,23 @@ export function ImportWizardPage() {
           <MappingStep
             job={job.data}
             suggestion={upload}
-            onConfirmed={() => setMappingConfirmed(true)}
+            onConfirmed={() => {
+              setEditingMapping(false);
+              setMappingConfirmed(true);
+            }}
           />
         )}
         {step === 3 && jobId && job.data && (
           <PreviewStep
             job={job.data}
-            onBack={() => setMappingConfirmed(false)}
-            onCommitted={() => setMappingConfirmed(false)}
+            onBack={() => {
+              setEditingMapping(true);
+              setMappingConfirmed(false);
+            }}
+            onCommitted={() => {
+              setEditingMapping(false);
+              setMappingConfirmed(false);
+            }}
           />
         )}
         {step === 5 && jobId && job.data && <ReportStep job={job.data} />}
