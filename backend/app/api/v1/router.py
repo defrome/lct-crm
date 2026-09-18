@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from app.api.v1 import (
     audit,
     catalogs,
+    communications,
     imports,
     integrations,
     interactions,
@@ -35,5 +36,6 @@ api_router.include_router(users.router)
 api_router.include_router(imports.router)
 api_router.include_router(integrations.router)
 api_router.include_router(audit.router)
+api_router.include_router(communications.router)
 
 __all__ = ["api_router"]

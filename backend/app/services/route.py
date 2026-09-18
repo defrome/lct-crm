@@ -74,7 +74,9 @@ class RouteService:
         await self.session.commit()
         return await self.interactions.reload(interaction)
 
-    async def start_if_configured(self, interaction: Interaction) -> bool:
+    async def start_if_configured(
+        self, interaction: Interaction, *, workflow_id: uuid.UUID | None = None
+    ) -> bool:
         """Auto-start a freshly created card on the default workflow.
 
         Silent no-op when no default workflow is published yet — creating cards
@@ -83,7 +85,9 @@ class RouteService:
         """
         if interaction.current_stage_id is not None:
             return False
-        return await self._place_on_initial_stage(interaction, workflow_id=None, comment=None)
+        return await self._place_on_initial_stage(
+            interaction, workflow_id=workflow_id, comment=None
+        )
 
     async def _place_on_initial_stage(
         self,
@@ -94,8 +98,17 @@ class RouteService:
     ) -> bool:
         if workflow_id is not None:
             workflow = await self.workflows.get_or_fail(workflow_id)
+            if workflow.counterparty_group != interaction.counterparty_group:
+                raise ValidationError(
+                    "Назначенный workflow относится к другой группе контрагентов",
+                    details={
+                        "workflow_id": str(workflow_id),
+                        "workflow_group": workflow.counterparty_group.value,
+                        "interaction_group": interaction.counterparty_group.value,
+                    },
+                )
         else:
-            default_workflow = await self.workflows.find_default()
+            default_workflow = await self.workflows.find_default(interaction.counterparty_group)
             if default_workflow is None:
                 return False
             workflow = default_workflow
@@ -187,6 +200,13 @@ class RouteService:
             )
         )
         await self.session.flush()
+        # Outbox rows are created in the same transaction, while actual channel
+        # delivery is intentionally performed later and can never roll back a move.
+        from app.services.communications import CommunicationService
+
+        await CommunicationService(self.session, self.scope).enqueue_transition(
+            interaction, transition.id
+        )
         await self.session.commit()
         return await self.interactions.reload(interaction)
 

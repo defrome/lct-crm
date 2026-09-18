@@ -2,6 +2,14 @@
 
 from app.models.audit_log import AuditLog
 from app.models.base import Base, DomainBase
+from app.models.communications import (
+    ChatMessage,
+    EducationActivity,
+    EducationActivityParticipant,
+    EducationParticipant,
+    NotificationDelivery,
+    NotificationRule,
+)
 from app.models.enums import (
     AttachmentFormat,
     AuditAction,
@@ -36,7 +44,11 @@ __all__ = [
     "AuditAction",
     "AuditLog",
     "Base",
+    "ChatMessage",
     "DomainBase",
+    "EducationActivity",
+    "EducationActivityParticipant",
+    "EducationParticipant",
     "ITDirection",
     "ITProduct",
     "ITProductDirection",
@@ -52,6 +64,8 @@ __all__ = [
     "IntegrationSyncStatus",
     "Interaction",
     "InteractionStageHistory",
+    "NotificationDelivery",
+    "NotificationRule",
     "University",
     "UniversityAssignment",
     "UniversityContact",

@@ -20,6 +20,7 @@ from app.models.enums import IntegrationMode
 # from local development while preserving the production-only auth safeguard.
 Environment = Literal["local", "dev", "test", "staging", "production"]
 AuthMode = Literal["dev", "keycloak"]
+CacheBackend = Literal["redis"]
 
 
 class Settings(BaseSettings):
@@ -86,6 +87,19 @@ class Settings(BaseSettings):
     minio_secure: bool = False
     minio_bucket: str = "crm-files"
 
+    # --- Cache and optional modules ---------------------------------------
+    # A disabled cache is deliberately a no-op: it never becomes an offline
+    # write queue and changing this setting does not alter business data.
+    cache_enabled: bool = False
+    cache_backend: CacheBackend = "redis"
+    redis_url: str = "redis://localhost:6379/0"
+    cache_ttl_seconds: int = 60
+    feature_notifications_enabled: bool = False
+    feature_external_channels_enabled: bool = False
+    feature_chat_enabled: bool = False
+    feature_cache_enabled: bool = False
+    notifications_poll_seconds: int = 60
+
     # --- Attachments -------------------------------------------------------
     # Stage attachments (FR-04), stored in object storage.
     attachment_max_file_size: int = 25 * 1024 * 1024  # 25 MiB
@@ -128,6 +142,10 @@ class Settings(BaseSettings):
             raise ValueError("AUTH_MODE=keycloak requires KEYCLOAK_ISSUER to be set")
         if self.env == "production" and self.object_storage_backend != "minio":
             raise ValueError("OBJECT_STORAGE_BACKEND=memory is forbidden when ENV=production")
+        if self.cache_ttl_seconds < 1:
+            raise ValueError("CACHE_TTL_SECONDS must be at least 1")
+        if self.notifications_poll_seconds < 10:
+            raise ValueError("NOTIFICATIONS_POLL_SECONDS must be at least 10")
         return self
 
 

@@ -7,7 +7,7 @@ import uuid
 
 from pydantic import BaseModel, Field
 
-from app.models.enums import AttachmentFormat, WorkflowVersionStatus
+from app.models.enums import AttachmentFormat, CounterpartyGroup, WorkflowVersionStatus
 from app.schemas.common import ORMModel
 
 # --- templates and versions ------------------------------------------------
@@ -16,6 +16,7 @@ from app.schemas.common import ORMModel
 class WorkflowCreate(BaseModel):
     name: str = Field(min_length=1, max_length=300, examples=["Базовый процесс работы с вузом"])
     description: str | None = None
+    counterparty_group: CounterpartyGroup = CounterpartyGroup.B2B
     is_default: bool = Field(
         default=False, description="Workflow, на который автоматически встают новые карточки"
     )
@@ -26,12 +27,14 @@ class WorkflowUpdate(BaseModel):
     description: str | None = None
     is_default: bool | None = None
     is_active: bool | None = None
+    counterparty_group: CounterpartyGroup | None = None
 
 
 class WorkflowRead(ORMModel):
     id: uuid.UUID
     name: str
     description: str | None
+    counterparty_group: CounterpartyGroup
     is_default: bool
     is_active: bool
     created_at: dt.datetime
@@ -59,6 +62,50 @@ class VersionRead(ORMModel):
     created_at: dt.datetime
 
 
+class StageMigration(BaseModel):
+    """Explicit old-to-new stage mapping used for a confirmed route migration."""
+
+    from_stage_id: uuid.UUID
+    to_stage_id: uuid.UUID
+
+
+class MigrationPreviewRequest(BaseModel):
+    stage_mappings: list[StageMigration] = Field(default_factory=list)
+
+
+class MigrationPreviewItem(BaseModel):
+    interaction_id: uuid.UUID
+    from_stage_id: uuid.UUID
+    to_stage_id: uuid.UUID | None
+
+
+class MigrationPreview(BaseModel):
+    source_version_id: uuid.UUID | None
+    target_version_id: uuid.UUID
+    affected_cards: list[MigrationPreviewItem] = Field(default_factory=list)
+    affected_count: int = 0
+    unmapped_stage_ids: list[uuid.UUID] = Field(default_factory=list)
+
+
+class PublishRequest(MigrationPreviewRequest):
+    """Publishing with a migration always requires this deliberate confirmation."""
+
+    confirm_migration: bool = False
+
+
+class StageDeleteRequest(BaseModel):
+    target_stage_id: uuid.UUID
+    confirm: bool = False
+
+
+class StageDeletePreview(BaseModel):
+    stage_id: uuid.UUID
+    workflow_version_id: uuid.UUID
+    affected_count: int
+    interaction_ids: list[uuid.UUID] = Field(default_factory=list)
+    suggested_target_stage_id: uuid.UUID | None = None
+
+
 # --- stages ----------------------------------------------------------------
 
 
@@ -79,6 +126,7 @@ class StageRename(BaseModel):
 
     name: str | None = Field(default=None, min_length=1, max_length=300)
     description: str | None = None
+    confirm: bool = False
 
 
 class StageStructureUpdate(BaseModel):

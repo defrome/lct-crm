@@ -59,6 +59,19 @@ services:
       retries: 20
     restart: unless-stopped
 
+  redis:
+    image: redis:7.4-alpine
+    container_name: crm-redis
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
   api:
     image: ${API_IMAGE:?API_IMAGE is required}:${IMAGE_TAG:-main}
     container_name: crm-api
@@ -66,6 +79,8 @@ services:
       db:
         condition: service_healthy
       minio:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     environment:
       ENV: ${ENV:-test}
@@ -91,6 +106,14 @@ services:
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
       MINIO_SECURE: "false"
       MINIO_BUCKET: ${MINIO_BUCKET:-crm-files}
+      CACHE_ENABLED: ${CACHE_ENABLED:-false}
+      CACHE_BACKEND: ${CACHE_BACKEND:-redis}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      CACHE_TTL_SECONDS: ${CACHE_TTL_SECONDS:-60}
+      FEATURE_CACHE_ENABLED: ${FEATURE_CACHE_ENABLED:-false}
+      FEATURE_NOTIFICATIONS_ENABLED: ${FEATURE_NOTIFICATIONS_ENABLED:-false}
+      FEATURE_EXTERNAL_CHANNELS_ENABLED: ${FEATURE_EXTERNAL_CHANNELS_ENABLED:-false}
+      FEATURE_CHAT_ENABLED: ${FEATURE_CHAT_ENABLED:-false}
     expose:
       - "8000"
     healthcheck:
@@ -183,6 +206,7 @@ services:
 volumes:
   postgres-data:
   minio-data:
+  redis-data:
   caddy-data:
   caddy-config:
   prometheus-data:
