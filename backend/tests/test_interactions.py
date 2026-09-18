@@ -214,7 +214,9 @@ async def test_api_create_loads_related_objects(session, client, manager_user, s
 
 
 async def test_any_user_can_update_an_unassigned_interaction(session, client, kam_user, scope):
-    university = await UniversityService(session, scope).create(UniversityCreate(name="Общая очередь"))
+    university = await UniversityService(session, scope).create(
+        UniversityCreate(name="Общая очередь")
+    )
     interaction = await InteractionService(session, scope).create(
         InteractionCreate(university_id=university.id)
     )
@@ -235,7 +237,9 @@ async def test_any_user_can_update_an_unassigned_interaction(session, client, ka
 async def test_user_cannot_update_an_interaction_after_responsible_is_assigned(
     session, client, kam_user, manager_user, scope
 ):
-    university = await UniversityService(session, scope).create(UniversityCreate(name="Закреплённый вуз"))
+    university = await UniversityService(session, scope).create(
+        UniversityCreate(name="Закреплённый вуз")
+    )
     await AssignmentService(session, scope).create(
         university.id,
         AssignmentCreate(user_id=kam_user.id, assigned_from=dt.date.today()),
