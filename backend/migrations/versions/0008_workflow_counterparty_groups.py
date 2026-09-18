@@ -10,6 +10,7 @@ from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 revision: str = "0008_workflow_counterparty_groups"
 down_revision: str | None = "0007_minio_object_storage"
@@ -17,7 +18,9 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
-counterparty_group = sa.Enum("b2b", "b2c", name="counterparty_group")
+# The type is created explicitly below.  ``create_type=False`` prevents the
+# column DDL from attempting a second CREATE TYPE on PostgreSQL.
+counterparty_group = postgresql.ENUM("b2b", "b2c", name="counterparty_group", create_type=False)
 
 
 def upgrade() -> None:
