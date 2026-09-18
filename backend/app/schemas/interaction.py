@@ -15,6 +15,13 @@ from app.schemas.user import UserShort
 
 class InteractionCreate(BaseModel):
     university_id: uuid.UUID
+    workflow_id: uuid.UUID | None = Field(
+        default=None,
+        description=(
+            "Назначенный workflow для новой карточки. Если не указан, используется "
+            "workflow по умолчанию. Уже созданные карточки при смене назначения не меняются."
+        ),
+    )
     it_direction_id: uuid.UUID | None = None
     it_product_id: uuid.UUID | None = None
     responsible_user_id: uuid.UUID | None = None

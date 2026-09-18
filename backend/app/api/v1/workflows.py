@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Body, Depends, status
 
 from app.api.v1.deps import (
     CATALOG_ERRORS,
@@ -20,8 +20,12 @@ from app.core.errors import ErrorCode
 from app.core.security import CurrentUser, require_admin, require_manager
 from app.schemas.common import Page
 from app.schemas.workflow import (
+    MigrationPreview,
+    MigrationPreviewRequest,
+    PublishRequest,
     StageCardCount,
     StageCreate,
+    StageDeleteRequest,
     StageRead,
     StageRename,
     StageStructureUpdate,
@@ -218,8 +222,34 @@ async def publish_version(
     session: SessionDep,
     scope: ScopeDep,
     _: CurrentUser = Depends(require_manager),
+    data: PublishRequest = Body(default_factory=PublishRequest),
 ) -> VersionRead:
-    return VersionRead.model_validate(await WorkflowService(session, scope).publish(version_id))
+    mappings = {item.from_stage_id: item.to_stage_id for item in data.stage_mappings}
+    return VersionRead.model_validate(
+        await WorkflowService(session, scope).publish(
+            version_id, stage_mappings=mappings, confirm_migration=data.confirm_migration
+        )
+    )
+
+
+@router.post(
+    "/{workflow_id}/versions/{version_id}/migration-preview",
+    response_model=MigrationPreview,
+    summary="Предварительный просмотр миграции карточек",
+    responses=STRUCTURE_ERRORS,
+)
+async def migration_preview(
+    workflow_id: uuid.UUID,
+    version_id: uuid.UUID,
+    data: MigrationPreviewRequest,
+    session: SessionDep,
+    scope: ScopeDep,
+    _: CurrentUser = Depends(require_manager),
+) -> MigrationPreview:
+    mappings = {item.from_stage_id: item.to_stage_id for item in data.stage_mappings}
+    return MigrationPreview.model_validate(
+        await WorkflowService(session, scope).migration_preview(version_id, mappings)
+    )
 
 
 @router.get(
@@ -333,10 +363,25 @@ async def rename_stage(
     data: StageRename,
     session: SessionDep,
     scope: ScopeDep,
-    _: CurrentUser = Depends(require_manager),
+    user: CurrentUser = Depends(require_manager),
 ) -> StageRead:
+    service = WorkflowService(session, scope)
+    stage = await service.stages.get_or_fail(stage_id)
+    version = await service.versions.get_or_fail(stage.workflow_version_id)
+    if version.status.value == "published":
+        if not user.is_admin:
+            from app.core.errors import AccessDeniedError
+
+            raise AccessDeniedError("Переименовать опубликованный этап может только администратор")
+        if not data.confirm:
+            from app.core.errors import ValidationError
+
+            raise ValidationError(
+                "Переименование опубликованного этапа требует подтверждения",
+                details={"stage_id": str(stage_id), "current_name": stage.name},
+            )
     stage = await WorkflowService(session, scope).rename_stage(
-        stage_id, data.model_dump(exclude_unset=True)
+        stage_id, data.model_dump(exclude_unset=True, exclude={"confirm"})
     )
     return StageRead.model_validate(stage)
 
@@ -377,11 +422,18 @@ async def update_stage_structure(
 )
 async def delete_stage(
     stage_id: uuid.UUID,
+    data: StageDeleteRequest,
     session: SessionDep,
     scope: ScopeDep,
     _: CurrentUser = Depends(require_manager),
 ) -> None:
-    await WorkflowService(session, scope).delete_stage(stage_id)
+    if not data.confirm:
+        from app.core.errors import ValidationError
+
+        raise ValidationError("Удаление этапа требует явного подтверждения")
+    await WorkflowService(session, scope).delete_stage(
+        stage_id, target_stage_id=data.target_stage_id
+    )
 
 
 # --- transitions -----------------------------------------------------------

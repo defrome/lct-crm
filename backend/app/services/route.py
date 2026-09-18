@@ -74,7 +74,9 @@ class RouteService:
         await self.session.commit()
         return await self.interactions.reload(interaction)
 
-    async def start_if_configured(self, interaction: Interaction) -> bool:
+    async def start_if_configured(
+        self, interaction: Interaction, *, workflow_id: uuid.UUID | None = None
+    ) -> bool:
         """Auto-start a freshly created card on the default workflow.
 
         Silent no-op when no default workflow is published yet — creating cards
@@ -83,7 +85,9 @@ class RouteService:
         """
         if interaction.current_stage_id is not None:
             return False
-        return await self._place_on_initial_stage(interaction, workflow_id=None, comment=None)
+        return await self._place_on_initial_stage(
+            interaction, workflow_id=workflow_id, comment=None
+        )
 
     async def _place_on_initial_stage(
         self,

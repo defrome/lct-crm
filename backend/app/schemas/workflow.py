@@ -59,6 +59,42 @@ class VersionRead(ORMModel):
     created_at: dt.datetime
 
 
+class StageMigration(BaseModel):
+    """Explicit old-to-new stage mapping used for a confirmed route migration."""
+
+    from_stage_id: uuid.UUID
+    to_stage_id: uuid.UUID
+
+
+class MigrationPreviewRequest(BaseModel):
+    stage_mappings: list[StageMigration] = Field(default_factory=list)
+
+
+class MigrationPreviewItem(BaseModel):
+    interaction_id: uuid.UUID
+    from_stage_id: uuid.UUID
+    to_stage_id: uuid.UUID | None
+
+
+class MigrationPreview(BaseModel):
+    source_version_id: uuid.UUID | None
+    target_version_id: uuid.UUID
+    affected_cards: list[MigrationPreviewItem] = Field(default_factory=list)
+    affected_count: int = 0
+    unmapped_stage_ids: list[uuid.UUID] = Field(default_factory=list)
+
+
+class PublishRequest(MigrationPreviewRequest):
+    """Publishing with a migration always requires this deliberate confirmation."""
+
+    confirm_migration: bool = False
+
+
+class StageDeleteRequest(BaseModel):
+    target_stage_id: uuid.UUID
+    confirm: bool = False
+
+
 # --- stages ----------------------------------------------------------------
 
 
@@ -79,6 +115,7 @@ class StageRename(BaseModel):
 
     name: str | None = Field(default=None, min_length=1, max_length=300)
     description: str | None = None
+    confirm: bool = False
 
 
 class StageStructureUpdate(BaseModel):

@@ -155,7 +155,7 @@ async def test_published_new_version_does_not_reroute_a_running_card(session, sc
     service = WorkflowService(session, scope)
     draft = await service.create_draft(workflow.id, clone_from_id=old_version.id)
     cloned = {stage.code: stage for stage in await service.list_stages(draft.id)}
-    await service.delete_stage(cloned["WF-03"].id)
+    await service.delete_stage(cloned["WF-03"].id, target_stage_id=cloned["WF-04"].id)
     await service.publish(draft.id)
 
     route = RouteService(session, scope)
@@ -172,6 +172,56 @@ async def test_published_new_version_does_not_reroute_a_running_card(session, sc
     # А новая карточка уже идёт по новой версии.
     _, fresh = await _card(session, scope, name="СПбПУ")
     assert fresh.workflow_version_id == draft.id
+
+
+async def test_migration_preview_requires_confirmation_and_records_audit(session, scope):
+    """A9/A12: active cards move only after a reviewed, explicit confirmation."""
+    workflow = await ensure_base_workflow(session, scope)
+    old_version, old_stages = await _stages(session, scope, workflow)
+    _, interaction = await _card(session, scope)
+
+    service = WorkflowService(session, scope)
+    draft = await service.create_draft(workflow.id, clone_from_id=old_version.id)
+    preview = await service.migration_preview(draft.id)
+    assert preview["affected_count"] == 1
+    assert preview["affected_cards"][0]["interaction_id"] == interaction.id
+    assert preview["affected_cards"][0]["from_stage_id"] == old_stages["WF-01"].id
+    assert preview["affected_cards"][0]["to_stage_id"] is not None
+
+    with pytest.raises(ValidationError):
+        await service.publish(draft.id, confirm_migration=False)
+
+    migrated = await service.publish(draft.id, confirm_migration=True)
+    refreshed = await RouteService(session, scope).interactions.get_or_fail(interaction.id)
+    assert refreshed.workflow_version_id == migrated.id
+    assert refreshed.current_stage_id == preview["affected_cards"][0]["to_stage_id"]
+
+    entries, total = await search_audit_log(
+        session, entity_type="workflow_migration", action=AuditAction.UPDATE
+    )
+    assert total == 1
+    assert entries[0].changes["affected_count"] == 1
+
+
+async def test_stage_delete_transfers_cards_to_selected_target(session, scope):
+    workflow = await ensure_base_workflow(session, scope)
+    version, _ = await _stages(session, scope, workflow)
+    _, interaction = await _card(session, scope, "Удаление этапа")
+
+    # A draft may contain cards after an admin explicitly starts them on it.
+    service = WorkflowService(session, scope)
+    draft = await service.create_draft(workflow.id, clone_from_id=version.id)
+    draft_stages = {stage.code: stage for stage in await service.list_stages(draft.id)}
+    interaction.workflow_version_id = draft.id
+    interaction.current_stage_id = draft_stages["WF-01"].id
+    await session.commit()
+
+    with pytest.raises(ValidationError):
+        await service.delete_stage(draft_stages["WF-01"].id)
+
+    await service.delete_stage(draft_stages["WF-01"].id, target_stage_id=draft_stages["WF-02"].id)
+    refreshed = await InteractionService(session, scope).get(interaction.id)
+    assert refreshed.current_stage_id == draft_stages["WF-02"].id
 
 
 async def test_renaming_a_stage_does_not_disturb_a_card_standing_on_it(session, scope):

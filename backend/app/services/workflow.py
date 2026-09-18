@@ -26,8 +26,9 @@ from app.core.errors import (
     ValidationError,
     WorkflowVersionLockedError,
 )
-from app.models.enums import WorkflowVersionStatus
+from app.models.enums import AuditAction, WorkflowVersionStatus
 from app.models.workflow import (
+    InteractionStageHistory,
     Workflow,
     WorkflowStage,
     WorkflowTransition,
@@ -39,6 +40,7 @@ from app.repositories.workflow import (
     WorkflowTransitionRepository,
     WorkflowVersionRepository,
 )
+from app.services.audit import log_event
 from app.services.base import apply_patch, integrity_guard
 from app.services.text import clean_text, normalize_name
 
@@ -200,7 +202,66 @@ class WorkflowService:
             )
         await self.session.flush()
 
-    async def publish(self, version_id: uuid.UUID) -> WorkflowVersion:
+    async def migration_preview(
+        self, version_id: uuid.UUID, stage_mappings: dict[uuid.UUID, uuid.UUID] | None = None
+    ) -> dict[str, Any]:
+        target = await self.versions.get_or_fail(version_id)
+        source = await self.versions.find_published(target.workflow_id)
+        if source is None or source.id == target.id:
+            return {
+                "source_version_id": None,
+                "target_version_id": target.id,
+                "affected_cards": [],
+                "affected_count": 0,
+                "unmapped_stage_ids": [],
+            }
+        source_stages = {stage.id: stage for stage in await self.stages.list_for_version(source.id)}
+        target_stages = await self.stages.list_for_version(target.id)
+        target_ids = {stage.id for stage in target_stages}
+        mappings = dict(stage_mappings or {})
+        for old_stage in source_stages.values():
+            if old_stage.id not in mappings and old_stage.code:
+                match = next(
+                    (stage for stage in target_stages if stage.code == old_stage.code), None
+                )
+                if match is not None:
+                    mappings[old_stage.id] = match.id
+        invalid_sources = set(mappings) - set(source_stages)
+        invalid_targets = set(mappings.values()) - target_ids
+        if invalid_sources or invalid_targets:
+            raise ValidationError(
+                "Сопоставление содержит этапы не из публикуемых версий",
+                details={
+                    "invalid_source_stage_ids": [str(item) for item in invalid_sources],
+                    "invalid_target_stage_ids": [str(item) for item in invalid_targets],
+                },
+            )
+        cards = await self.versions.active_cards_on_version(source.id)
+        affected = [
+            {
+                "interaction_id": card.id,
+                "from_stage_id": card.current_stage_id,
+                "to_stage_id": mappings.get(card.current_stage_id),
+            }
+            for card in cards
+        ]
+        return {
+            "source_version_id": source.id,
+            "target_version_id": target.id,
+            "affected_cards": affected,
+            "affected_count": len(affected),
+            "unmapped_stage_ids": sorted(
+                {item["from_stage_id"] for item in affected if item["to_stage_id"] is None}, key=str
+            ),
+        }
+
+    async def publish(
+        self,
+        version_id: uuid.UUID,
+        *,
+        stage_mappings: dict[uuid.UUID, uuid.UUID] | None = None,
+        confirm_migration: bool | None = None,
+    ) -> WorkflowVersion:
         """Freeze a draft and make it the route new cards start on."""
         version = await self.versions.get_or_fail(version_id)
         if version.status == WorkflowVersionStatus.PUBLISHED:
@@ -220,6 +281,18 @@ class WorkflowService:
                 "Не задан начальный этап версии", details={"version_id": str(version_id)}
             )
 
+        preview = await self.migration_preview(version_id, stage_mappings)
+        if preview["affected_count"] and confirm_migration is False:
+            raise ValidationError(
+                "Публикация изменит активные карточки и требует подтверждения",
+                details={"migration_preview": self._jsonify_preview(preview)},
+            )
+        if confirm_migration and preview["unmapped_stage_ids"]:
+            raise ValidationError(
+                "Для всех затрагиваемых этапов нужно выбрать этап назначения",
+                details={"migration_preview": self._jsonify_preview(preview)},
+            )
+
         # Only one version of a workflow is published at a time; the previous
         # one is archived, not deleted — cards still point at it.
         #
@@ -236,12 +309,65 @@ class WorkflowService:
 
         version.status = WorkflowVersionStatus.PUBLISHED
         version.published_at = dt.datetime.now(dt.UTC)
+        if preview["affected_count"] and confirm_migration:
+            from app.models.interaction import Interaction
+
+            for item in preview["affected_cards"]:
+                interaction = await self.session.get(Interaction, item["interaction_id"])
+                if interaction is None:
+                    continue
+                interaction.workflow_version_id = version.id
+                interaction.current_stage_id = item["to_stage_id"]
+                self.session.add(
+                    InteractionStageHistory(
+                        interaction_id=interaction.id,
+                        university_id=interaction.university_id,
+                        workflow_version_id=version.id,
+                        from_stage_id=item["from_stage_id"],
+                        to_stage_id=item["to_stage_id"],
+                        comment="Миграция на новую версию workflow",
+                    )
+                )
+            await self.session.flush()
+            await log_event(
+                self.session,
+                action=AuditAction.UPDATE,
+                entity_type="workflow_migration",
+                entity_id=version.id,
+                changes={
+                    "source_version_id": preview["source_version_id"],
+                    "target_version_id": version.id,
+                    "affected_count": preview["affected_count"],
+                    "interaction_ids": [
+                        item["interaction_id"] for item in preview["affected_cards"]
+                    ],
+                    "stage_mappings": stage_mappings or {},
+                },
+            )
         async with integrity_guard(
             self.session, duplicate_message="У workflow уже есть опубликованная версия"
         ):
             await self.session.flush()
             await self.session.commit()
         return await self.versions.reload(version)
+
+    @staticmethod
+    def _jsonify_preview(preview: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "source_version_id": str(preview["source_version_id"])
+            if preview["source_version_id"]
+            else None,
+            "target_version_id": str(preview["target_version_id"]),
+            "affected_count": preview["affected_count"],
+            "unmapped_stage_ids": [str(item) for item in preview["unmapped_stage_ids"]],
+            "affected_cards": [
+                {
+                    key: str(value) if isinstance(value, uuid.UUID) else value
+                    for key, value in item.items()
+                }
+                for item in preview["affected_cards"]
+            ],
+        }
 
     def _require_draft(self, version: WorkflowVersion) -> None:
         if version.status != WorkflowVersionStatus.DRAFT:
@@ -311,6 +437,7 @@ class WorkflowService:
         `update_stage_structure`, which requires a draft.
         """
         stage = await self.stages.get_or_fail(stage_id)
+        version = await self.versions.get_or_fail(stage.workflow_version_id)
         allowed = {"name", "description"}
         unknown = set(patch) - allowed
         if unknown:
@@ -327,8 +454,21 @@ class WorkflowService:
         if "description" in patch:
             patch["description"] = clean_text(patch["description"])
 
+        before = {key: getattr(stage, key) for key in patch}
         apply_patch(stage, patch)
         await self.session.flush()
+        if version.status == WorkflowVersionStatus.PUBLISHED:
+            await log_event(
+                self.session,
+                action=AuditAction.UPDATE,
+                entity_type="workflow_stage_rename",
+                entity_id=stage.id,
+                changes={
+                    "workflow_version_id": version.id,
+                    "old": before,
+                    "new": {key: getattr(stage, key) for key in patch},
+                },
+            )
         await self.session.commit()
         return stage
 
@@ -353,22 +493,57 @@ class WorkflowService:
             await self.session.commit()
         return stage
 
-    async def delete_stage(self, stage_id: uuid.UUID) -> None:
+    async def delete_stage(
+        self, stage_id: uuid.UUID, *, target_stage_id: uuid.UUID | None = None
+    ) -> None:
         stage = await self.stages.get_or_fail(stage_id)
         version = await self.versions.get_or_fail(stage.workflow_version_id)
         self._require_draft(version)
 
-        cards = await self.stages.count_cards_on_stage(stage_id)
-        if cards:
+        cards = await self.stages.cards_on_stage(stage_id)
+        if target_stage_id is None:
             raise ValidationError(
-                f"Нельзя удалить этап: на нём стоят карточки ({cards})",
-                details={"blocked_by": {"карточки": cards}},
+                "Для удаления этапа необходимо выбрать этап назначения",
+                details={"affected_count": len(cards)},
+            )
+        target = None
+        if target_stage_id is not None:
+            if target_stage_id == stage_id:
+                raise ValidationError("Этап назначения должен отличаться от удаляемого")
+            target = await self.stages.get_or_fail(target_stage_id)
+            if target.workflow_version_id != version.id:
+                raise ValidationError("Этап назначения должен принадлежать той же версии workflow")
+        for interaction in cards:
+            interaction.current_stage_id = target.id  # type: ignore[union-attr]
+            self.session.add(
+                InteractionStageHistory(
+                    interaction_id=interaction.id,
+                    university_id=interaction.university_id,
+                    workflow_version_id=interaction.workflow_version_id,
+                    from_stage_id=stage.id,
+                    to_stage_id=target.id,  # type: ignore[union-attr]
+                    comment="Перенос при удалении этапа workflow",
+                )
             )
         # Transitions touching the stage go with it; both live in the draft.
         for transition in await self.transitions.list_for_version(version.id):
             if stage_id in (transition.from_stage_id, transition.to_stage_id):
                 await self.transitions.soft_delete(transition)
         await self.stages.soft_delete(stage)
+        await self.session.flush()
+        if cards:
+            await log_event(
+                self.session,
+                action=AuditAction.UPDATE,
+                entity_type="workflow_stage_bulk_transfer",
+                entity_id=stage.id,
+                changes={
+                    "from_stage_id": stage.id,
+                    "to_stage_id": target.id,  # type: ignore[union-attr]
+                    "affected_count": len(cards),
+                    "interaction_ids": [card.id for card in cards],
+                },
+            )
         await self.session.commit()
 
     # -- transitions --------------------------------------------------------

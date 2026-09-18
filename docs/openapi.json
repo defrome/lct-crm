@@ -2497,7 +2497,7 @@
           "Взаимодействия"
         ],
         "summary": "Список взаимодействий",
-        "description": "Карточки «вуз + ИТ-направление + ИТ-продукт».\n\nРоль `user` видит только карточки закреплённых за ним вузов. Поля `workflow_version_id` и `current_stage_id` зарезервированы под workflow-движок (SPEC-02) и пока всегда `null`.",
+        "description": "Карточки «вуз + ИТ-направление + ИТ-продукт».\n\nРоль `user` видит карточки закреплённых за ним вузов и все карточки без назначенного ответственного. Поля `workflow_version_id` и `current_stage_id` зарезервированы под workflow-движок (SPEC-02) и пока всегда `null`.",
         "operationId": "list_interactions_api_v1_interactions_get",
         "parameters": [
           {
@@ -2867,7 +2867,7 @@
           "Взаимодействия"
         ],
         "summary": "Изменить взаимодействие",
-        "description": "Частичное обновление. Доступно ролям `manager` и `admin`.",
+        "description": "Частичное обновление. Карточку без назначенного ответственного может изменить любой авторизованный пользователь; назначенную карточку — роли `manager` и `admin`.",
         "operationId": "update_interaction_api_v1_interactions__interaction_id__patch",
         "parameters": [
           {
@@ -3150,7 +3150,7 @@
           "Workflow: ведение карточки"
         ],
         "summary": "Поставить карточку на workflow",
-        "description": "Ставит карточку на начальный этап опубликованной версии. Если `workflow_id` не передан, берётся workflow по умолчанию.\n\nНовые карточки встают на маршрут автоматически при создании и при импорте — эта ручка нужна для карточек, заведённых до того, как маршрут был настроен.",
+        "description": "Ставит карточку на начальный этап опубликованной версии. Если `workflow_id` не передан, берётся workflow по умолчанию.\n\nНовые карточки встают на маршрут автоматически при создании и при импорте — эта ручка нужна для карточек, заведённых до того, как маршрут был настроен.\n\nДоступно любой роли: `user` — только для карточек вуза, за который он закреплён в `university_assignments`, `manager` и `admin` — для любых.",
         "operationId": "start_route_api_v1_interactions__interaction_id__route_start_post",
         "parameters": [
           {
@@ -3224,7 +3224,7 @@
           "Workflow: ведение карточки"
         ],
         "summary": "Перевести карточку на другой этап",
-        "description": "Переход разрешён, только если он описан в версии workflow, по которой идёт карточка; иначе — `422 WORKFLOW_INVALID_TRANSITION` со списком допустимых этапов в `details.allowed_stage_ids`.\n\nЕсли переход помечен `requires_comment`, комментарий обязателен. Он сохраняется в истории перемещений и попадает в аудит.",
+        "description": "Переход разрешён, только если он описан в версии workflow, по которой идёт карточка; иначе — `422 WORKFLOW_INVALID_TRANSITION` со списком допустимых этапов в `details.allowed_stage_ids`.\n\nЕсли переход помечен `requires_comment`, комментарий обязателен. Он сохраняется в истории перемещений и попадает в аудит.\n\nДоступно любой роли: `user` — только для карточек вуза, за который он закреплён в `university_assignments` (`FR-03` — обновление статуса и комментирование предусмотрены для рядового пользователя), `manager` и `admin` — для любых.",
         "operationId": "make_transition_api_v1_interactions__interaction_id__transitions_post",
         "parameters": [
           {
@@ -3498,7 +3498,7 @@
           "Workflow: ведение карточки"
         ],
         "summary": "Приложить файл к этапу",
-        "description": "Допустимые форматы (`FR-04`): png, jpeg, pdf, zip, gzip, rar, doc, docx, xls, xlsx.\n\nТип определяется по сигнатуре файла, а не по имени: расширение обязано совпасть с фактическим содержимым, иначе вернётся `422 ATTACHMENT_INVALID_FORMAT`. Этап должен принадлежать той же версии workflow, по которой идёт карточка.",
+        "description": "Допустимые форматы (`FR-04`): png, jpeg, pdf, zip, gzip, rar, doc, docx, xls, xlsx.\n\nТип определяется по сигнатуре файла, а не по имени: расширение обязано совпасть с фактическим содержимым, иначе вернётся `422 ATTACHMENT_INVALID_FORMAT`. Этап должен принадлежать той же версии workflow, по которой идёт карточка.\n\nДоступно любой роли: `user` — только для карточек вуза, за который он закреплён в `university_assignments` (`FR-04` — прикладывание файлов не ограничено ролью), `manager` и `admin` — для любых.",
         "operationId": "upload_attachment_api_v1_interactions__interaction_id__stages__stage_id__attachments_post",
         "parameters": [
           {
@@ -4347,6 +4347,15 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -4354,6 +4363,99 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/VersionRead"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Доступ запрещён. Коды: ACCESS_DENIED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Объект не найден. Коды: NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Конфликт состояния или дубликат. Коды: WORKFLOW_VERSION_LOCKED, DUPLICATE_ENTITY",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Ошибка валидации. Коды: VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflows/{workflow_id}/versions/{version_id}/migration-preview": {
+      "post": {
+        "tags": [
+          "Workflow: настройка"
+        ],
+        "summary": "Предварительный просмотр миграции карточек",
+        "operationId": "migration_preview_api_v1_workflows__workflow_id__versions__version_id__migration_preview_post",
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Workflow Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Version Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MigrationPreviewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MigrationPreview"
                 }
               }
             }
@@ -4981,6 +5083,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StageDeleteRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "204": {
             "description": "Successful Response"
@@ -8246,6 +8358,19 @@
             "format": "uuid",
             "title": "University Id"
           },
+          "workflow_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflow Id",
+            "description": "Назначенный workflow для новой карточки. Если не указан, используется workflow по умолчанию. Уже созданные карточки при смене назначения не меняются."
+          },
           "it_direction_id": {
             "anyOf": [
               {
@@ -8773,6 +8898,99 @@
           "column"
         ],
         "title": "MappingSuggestion"
+      },
+      "MigrationPreview": {
+        "properties": {
+          "source_version_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Version Id"
+          },
+          "target_version_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Target Version Id"
+          },
+          "affected_cards": {
+            "items": {
+              "$ref": "#/components/schemas/MigrationPreviewItem"
+            },
+            "type": "array",
+            "title": "Affected Cards"
+          },
+          "affected_count": {
+            "type": "integer",
+            "title": "Affected Count",
+            "default": 0
+          },
+          "unmapped_stage_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Unmapped Stage Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_version_id",
+          "target_version_id"
+        ],
+        "title": "MigrationPreview"
+      },
+      "MigrationPreviewItem": {
+        "properties": {
+          "interaction_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Interaction Id"
+          },
+          "from_stage_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "From Stage Id"
+          },
+          "to_stage_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Stage Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "interaction_id",
+          "from_stage_id",
+          "to_stage_id"
+        ],
+        "title": "MigrationPreviewItem"
+      },
+      "MigrationPreviewRequest": {
+        "properties": {
+          "stage_mappings": {
+            "items": {
+              "$ref": "#/components/schemas/StageMigration"
+            },
+            "type": "array",
+            "title": "Stage Mappings"
+          }
+        },
+        "type": "object",
+        "title": "MigrationPreviewRequest"
       },
       "Page_AssignmentRead_": {
         "properties": {
@@ -9653,6 +9871,25 @@
         "type": "object",
         "title": "ProductUpdate"
       },
+      "PublishRequest": {
+        "properties": {
+          "stage_mappings": {
+            "items": {
+              "$ref": "#/components/schemas/StageMigration"
+            },
+            "type": "array",
+            "title": "Stage Mappings"
+          },
+          "confirm_migration": {
+            "type": "boolean",
+            "title": "Confirm Migration",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "PublishRequest",
+        "description": "Publishing with a migration always requires this deliberate confirmation."
+      },
       "ReportColumn": {
         "type": "string",
         "enum": [
@@ -10017,6 +10254,25 @@
         ],
         "title": "StageCreate"
       },
+      "StageDeleteRequest": {
+        "properties": {
+          "target_stage_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Target Stage Id"
+          },
+          "confirm": {
+            "type": "boolean",
+            "title": "Confirm",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "target_stage_id"
+        ],
+        "title": "StageDeleteRequest"
+      },
       "StageHistoryRead": {
         "properties": {
           "id": {
@@ -10105,6 +10361,27 @@
           "created_by"
         ],
         "title": "StageHistoryRead"
+      },
+      "StageMigration": {
+        "properties": {
+          "from_stage_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "From Stage Id"
+          },
+          "to_stage_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "To Stage Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "from_stage_id",
+          "to_stage_id"
+        ],
+        "title": "StageMigration",
+        "description": "Explicit old-to-new stage mapping used for a confirmed route migration."
       },
       "StageRead": {
         "properties": {
@@ -10200,6 +10477,11 @@
               }
             ],
             "title": "Description"
+          },
+          "confirm": {
+            "type": "boolean",
+            "title": "Confirm",
+            "default": false
           }
         },
         "type": "object",

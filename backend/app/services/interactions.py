@@ -114,7 +114,14 @@ class InteractionService:
             await self.session.flush()
             # A new card joins the default workflow straight away, so it is
             # never stranded outside the process. No-op until one is published.
-            await RouteService(self.session, self.scope).start_if_configured(interaction)
+            started = await RouteService(self.session, self.scope).start_if_configured(
+                interaction, workflow_id=data.workflow_id
+            )
+            if data.workflow_id is not None and not started:
+                raise ValidationError(
+                    "Назначенный workflow не имеет опубликованной версии с начальным этапом",
+                    details={"workflow_id": str(data.workflow_id)},
+                )
             await self.session.commit()
         # The response embeds university/direction/product/responsible, none of
         # which a just-inserted object has loaded.

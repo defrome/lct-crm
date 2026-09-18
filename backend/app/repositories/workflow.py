@@ -106,6 +106,26 @@ class WorkflowVersionRepository(BaseRepository[WorkflowVersion]):
         )
         return int(total or 0)
 
+    async def active_cards_on_version(self, version_id: uuid.UUID) -> list[Any]:
+        """Cards on non-terminal stages are the only cards eligible for migration."""
+        from app.models.interaction import Interaction
+
+        return list(
+            (
+                await self.session.scalars(
+                    sa.select(Interaction)
+                    .join(WorkflowStage, Interaction.current_stage_id == WorkflowStage.id)
+                    .where(
+                        Interaction.workflow_version_id == version_id,
+                        Interaction.deleted_at.is_(None),
+                        WorkflowStage.is_terminal.is_(False),
+                        WorkflowStage.deleted_at.is_(None),
+                    )
+                    .order_by(Interaction.created_at, Interaction.id)
+                )
+            ).all()
+        )
+
 
 class WorkflowStageRepository(BaseRepository[WorkflowStage]):
     model = WorkflowStage
@@ -154,6 +174,21 @@ class WorkflowStageRepository(BaseRepository[WorkflowStage]):
             .where(Interaction.current_stage_id == stage_id, Interaction.deleted_at.is_(None))
         )
         return int(total or 0)
+
+    async def cards_on_stage(self, stage_id: uuid.UUID) -> list[Any]:
+        from app.models.interaction import Interaction
+
+        return list(
+            (
+                await self.session.scalars(
+                    sa.select(Interaction)
+                    .where(
+                        Interaction.current_stage_id == stage_id, Interaction.deleted_at.is_(None)
+                    )
+                    .order_by(Interaction.created_at, Interaction.id)
+                )
+            ).all()
+        )
 
     async def count_cards_per_stage(self, version_id: uuid.UUID) -> dict[uuid.UUID, int]:
         """How many live cards sit on each stage — the graph shows this."""
