@@ -515,7 +515,9 @@
   .card {
     background: var(--crm-card);
     border-radius: var(--crm-radius-card);
+    max-width: 100%;
     min-width: 0;
+    overflow-wrap: anywhere;
     position: relative;
   }
 
@@ -527,6 +529,9 @@
   .panel {
     background: var(--crm-card);
     border-radius: var(--atmr-border-radius-xl);
+    max-width: 100%;
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .card-title {
