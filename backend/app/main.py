@@ -23,6 +23,7 @@ from app.core.config import settings
 from app.core.db import dispose_engine
 from app.core.errors import AppError, ErrorCode, error_payload
 from app.core.logging import configure_logging
+from app.services.cache import get_response_cache
 
 logger = logging.getLogger(__name__)
 
@@ -130,6 +131,18 @@ app = FastAPI(
     # needs only a username/password, not manual token wrangling.
     swagger_ui_init_oauth={"clientId": "crm-api", "appName": settings.app_name},
 )
+
+
+@app.middleware("http")
+async def invalidate_catalog_cache(
+    request: Request, call_next: Callable[[Request], Awaitable[Any]]
+) -> Any:
+    """Discard reference-data pages after a successful write request."""
+    response = await call_next(request)
+    if request.method in {"POST", "PUT", "PATCH", "DELETE"} and response.status_code < 400:
+        cache = await get_response_cache()
+        await cache.invalidate_prefix("crm:catalog:")
+    return response
 
 
 @app.middleware("http")

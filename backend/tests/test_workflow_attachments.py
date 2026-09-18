@@ -172,6 +172,40 @@ async def test_soft_deleted_attachment_disappears_but_bytes_remain(session, scop
     assert blob == 1, "содержимое остаётся — очистка это вопрос политики хранения"
 
 
+async def test_legacy_blob_migration_is_idempotent(session, scope):
+    """F12 переносит байты после успешной записи в MinIO и не дублирует их."""
+    import sqlalchemy as sa
+
+    from app.models.workflow import WorkflowAttachment, WorkflowAttachmentBlob
+    from scripts.migrate_attachment_blobs import migrate
+
+    interaction, stages, _ = await _card_on_stage(session, scope)
+    content = ATTACHMENT_SAMPLES["pdf"]
+    attachment = WorkflowAttachment(
+        interaction_id=interaction.id,
+        university_id=interaction.university_id,
+        stage_id=stages[0].id,
+        filename="старый-договор.pdf",
+        file_format=AttachmentFormat.PDF,
+        content_type="application/pdf",
+        size_bytes=len(content),
+        file_hash="legacy-hash",
+    )
+    session.add(attachment)
+    await session.flush()
+    session.add(WorkflowAttachmentBlob(attachment_id=attachment.id, data=content))
+    await session.commit()
+
+    report = await migrate()
+    assert report == {"migrated": 1, "skipped": 0, "missing_blob": 0, "failed": 0}
+    await session.refresh(attachment)
+    assert attachment.storage_key == f"attachments/{attachment.id}"
+    assert await AttachmentService(session, scope).storage.get(attachment.storage_key) == content
+    assert await session.scalar(sa.select(sa.func.count()).select_from(WorkflowAttachmentBlob)) == 0
+
+    assert (await migrate())["migrated"] == 0
+
+
 async def test_attachment_api_roundtrip(session, client, manager_user, scope):
     interaction, stages, _ = await _card_on_stage(session, scope)
 

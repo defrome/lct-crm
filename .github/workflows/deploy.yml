@@ -249,10 +249,10 @@ jobs:
           # handled below: its configuration and domain variables can change
           # between releases, and --no-recreate would leave it with stale (or
           # missing) environment variables.
-          if ! docker compose -f docker-compose.deploy.yml up -d --no-build --no-recreate db keycloak minio; then
+          if ! docker compose -f docker-compose.deploy.yml up -d --no-build --no-recreate db keycloak minio redis; then
             echo "compose startup failed; recent container logs follow"
             docker compose -f docker-compose.deploy.yml ps || true
-            docker compose -f docker-compose.deploy.yml logs --tail=100 db keycloak minio api web caddy || true
+            docker compose -f docker-compose.deploy.yml logs --tail=100 db keycloak minio redis api web caddy || true
             exit 1
           fi
 

@@ -28,6 +28,7 @@ from app.schemas.product import (
     VendorRead,
     VendorUpdate,
 )
+from app.services.cache import get_or_set_json
 from app.services.catalogs import ITDirectionService, ITProductService, VendorService
 
 vendors_router = APIRouter(prefix="/vendors", tags=["Справочник: вендоры"])
@@ -52,12 +53,18 @@ async def list_vendors(
     search: SearchQuery = None,
     sort: SortQuery = None,
 ) -> Page[VendorRead]:
-    items, total = await VendorService(session, scope).list(
-        page=page.page, size=page.size, search=search, sort=sort
+    async def load() -> dict[str, object]:
+        items, total = await VendorService(session, scope).list(
+            page=page.page, size=page.size, search=search, sort=sort
+        )
+        return Page.build(
+            [VendorRead.model_validate(item) for item in items], total, page.page, page.size
+        ).model_dump(mode="json")
+
+    result = await get_or_set_json(
+        f"crm:catalog:vendors:{page.page}:{page.size}:{search or ''}:{sort or ''}", load
     )
-    return Page.build(
-        [VendorRead.model_validate(item) for item in items], total, page.page, page.size
-    )
+    return Page[VendorRead].model_validate(result)
 
 
 @vendors_router.get(
@@ -139,12 +146,18 @@ async def list_directions(
     search: SearchQuery = None,
     sort: SortQuery = None,
 ) -> Page[DirectionRead]:
-    items, total = await ITDirectionService(session, scope).list(
-        page=page.page, size=page.size, search=search, sort=sort
+    async def load() -> dict[str, object]:
+        items, total = await ITDirectionService(session, scope).list(
+            page=page.page, size=page.size, search=search, sort=sort
+        )
+        return Page.build(
+            [DirectionRead.model_validate(item) for item in items], total, page.page, page.size
+        ).model_dump(mode="json")
+
+    result = await get_or_set_json(
+        f"crm:catalog:directions:{page.page}:{page.size}:{search or ''}:{sort or ''}", load
     )
-    return Page.build(
-        [DirectionRead.model_validate(item) for item in items], total, page.page, page.size
-    )
+    return Page[DirectionRead].model_validate(result)
 
 
 @directions_router.get(
@@ -230,12 +243,18 @@ async def list_products(
     search: SearchQuery = None,
     sort: SortQuery = None,
 ) -> Page[ProductRead]:
-    items, total = await ITProductService(session, scope).list(
-        page=page.page, size=page.size, search=search, sort=sort
+    async def load() -> dict[str, object]:
+        items, total = await ITProductService(session, scope).list(
+            page=page.page, size=page.size, search=search, sort=sort
+        )
+        return Page.build(
+            [ProductRead.model_validate(item) for item in items], total, page.page, page.size
+        ).model_dump(mode="json")
+
+    result = await get_or_set_json(
+        f"crm:catalog:products:{page.page}:{page.size}:{search or ''}:{sort or ''}", load
     )
-    return Page.build(
-        [ProductRead.model_validate(item) for item in items], total, page.page, page.size
-    )
+    return Page[ProductRead].model_validate(result)
 
 
 @products_router.get(
