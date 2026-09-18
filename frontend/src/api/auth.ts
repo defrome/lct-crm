@@ -1,28 +1,14 @@
-/**
- * Keycloak session handling.
- *
- * The realm is reached through this origin (`/kc/...`), proxied by the dev
- * server and by nginx in the container. That side-steps two things at once:
- * the realm client only whitelists its own web origin, and the API has no CORS
- * middleware — from the browser's point of view everything is same-origin.
- *
- * Flow is the resource-owner password grant against the public `crm-api`
- * client, which the realm already enables. The sign-in form lives in the app,
- * matching the ТЗ's UX-PATH step 1 («пользователь попал на окно авторизации»).
- * To switch to the redirect + PKCE flow instead, register a public client with
- * this origin in its redirect URIs and swap `requestToken` for an
- * authorization-code exchange — nothing outside this module depends on which
- * grant produced the token.
- */
+/** Keycloak Authorization Code + PKCE session handling. */
 
 const REALM_BASE = `${import.meta.env.VITE_KEYCLOAK_PATH ?? '/kc'}/realms/${
   import.meta.env.VITE_KEYCLOAK_REALM ?? 'crm'
 }/protocol/openid-connect`;
 
-const CLIENT_ID = import.meta.env.VITE_KEYCLOAK_CLIENT_ID ?? 'crm-api';
+const CLIENT_ID = import.meta.env.VITE_KEYCLOAK_CLIENT_ID ?? 'crm-web';
 const STORAGE_KEY = 'crm.session';
-
-/** Refresh this many seconds before the access token actually expires. */
+const PKCE_STATE_KEY = 'crm.pkce.state';
+const PKCE_VERIFIER_KEY = 'crm.pkce.verifier';
+const RETURN_PATH_KEY = 'crm.pkce.return_path';
 const REFRESH_MARGIN_SECONDS = 45;
 
 export interface Session {
@@ -60,6 +46,27 @@ function toSession(data: TokenResponse): Session {
   };
 }
 
+function redirectUri(): string {
+  return `${window.location.origin}/auth/callback`;
+}
+
+function randomUrlValue(bytes = 32): string {
+  const values = new Uint8Array(bytes);
+  crypto.getRandomValues(values);
+  return btoa(String.fromCharCode(...values))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/g, '');
+}
+
+async function codeChallenge(verifier: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
+  return btoa(String.fromCharCode(...new Uint8Array(digest)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/g, '');
+}
+
 async function postForm(body: Record<string, string>): Promise<TokenResponse> {
   let response: Response;
   try {
@@ -78,20 +85,70 @@ async function postForm(body: Record<string, string>): Promise<TokenResponse> {
       error_description?: string;
     };
     if (payload.error === 'invalid_grant') {
-      throw new AuthError('Неверный логин или пароль.', 'credentials');
+      throw new AuthError('Сеанс авторизации истёк. Запустите вход ещё раз.', 'expired');
     }
-    throw new AuthError(payload.error_description ?? 'Не удалось войти в систему.', 'credentials');
+    throw new AuthError(payload.error_description ?? 'Не удалось войти в систему.');
   }
-
   return (await response.json()) as TokenResponse;
 }
 
-export async function signIn(username: string, password: string): Promise<Session> {
+/** Starts the browser redirect to the Keycloak login screen. */
+export async function beginSignIn(): Promise<void> {
+  const state = randomUrlValue();
+  const verifier = randomUrlValue(48);
+  sessionStorage.setItem(PKCE_STATE_KEY, state);
+  sessionStorage.setItem(PKCE_VERIFIER_KEY, verifier);
+  sessionStorage.setItem(RETURN_PATH_KEY, `${window.location.pathname}${window.location.search}`);
+
+  const params = new URLSearchParams({
+    client_id: CLIENT_ID,
+    response_type: 'code',
+    redirect_uri: redirectUri(),
+    scope: 'openid profile email',
+    state,
+    code_challenge: await codeChallenge(verifier),
+    code_challenge_method: 'S256',
+  });
+  window.location.assign(`${REALM_BASE}/auth?${params.toString()}`);
+}
+
+/** Completes the callback and consumes the one-time PKCE values. */
+export async function completeSignIn(url = window.location.href): Promise<Session> {
+  const params = new URL(url).searchParams;
+  const error = params.get('error');
+  if (error) {
+    clearPkce();
+    throw new AuthError(params.get('error_description') ?? 'Вход отменён.');
+  }
+  const expectedState = sessionStorage.getItem(PKCE_STATE_KEY);
+  const verifier = sessionStorage.getItem(PKCE_VERIFIER_KEY);
+  if (!params.get('code') || !expectedState || !verifier || params.get('state') !== expectedState) {
+    clearPkce();
+    throw new AuthError('Не удалось проверить ответ авторизации. Запустите вход ещё раз.');
+  }
+
   const session = toSession(
-    await postForm({ grant_type: 'password', username: username.trim(), password, scope: 'openid' }),
+    await postForm({
+      grant_type: 'authorization_code',
+      code: params.get('code')!,
+      redirect_uri: redirectUri(),
+      code_verifier: verifier,
+    }),
   );
+  clearPkce();
   persist(session);
   return session;
+}
+
+function clearPkce(): void {
+  sessionStorage.removeItem(PKCE_STATE_KEY);
+  sessionStorage.removeItem(PKCE_VERIFIER_KEY);
+}
+
+export function returnPath(): string {
+  const path = sessionStorage.getItem(RETURN_PATH_KEY) ?? '/';
+  sessionStorage.removeItem(RETURN_PATH_KEY);
+  return path.startsWith('/') && !path.startsWith('//') ? path : '/';
 }
 
 export async function refresh(session: Session): Promise<Session> {
@@ -112,7 +169,6 @@ export async function refresh(session: Session): Promise<Session> {
 export async function signOut(session: Session | null): Promise<void> {
   clear();
   if (!session?.refreshToken) return;
-  // Best effort: revoking server-side is nice but never blocks leaving.
   await fetch(`${REALM_BASE}/logout`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -134,7 +190,6 @@ export function restore(): Session | null {
   try {
     const session = JSON.parse(raw) as Session;
     if (!session.accessToken) return null;
-    // A dead refresh token cannot revive the session, so treat it as absent.
     if (session.refreshExpiresAt && session.refreshExpiresAt < Date.now()) return null;
     return session;
   } catch {
@@ -142,16 +197,19 @@ export function restore(): Session | null {
   }
 }
 
+export function isCallback(): boolean {
+  return window.location.pathname === '/auth/callback';
+}
+
 export function isExpiring(session: Session): boolean {
   return session.expiresAt - Date.now() < REFRESH_MARGIN_SECONDS * 1000;
 }
 
-/** Milliseconds until this session should be refreshed, floored at 5s. */
 export function msUntilRefresh(session: Session): number {
   return Math.max(5_000, session.expiresAt - Date.now() - REFRESH_MARGIN_SECONDS * 1000);
 }
 
-/** Realm roles carried by the token, used to pick the landing screen early. */
+/** Realm roles carried by a token, useful for non-API landing decisions. */
 export function rolesFromToken(accessToken: string): string[] {
   try {
     const [, payload] = accessToken.split('.');

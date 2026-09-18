@@ -18,10 +18,11 @@ import type { CurrentUser, UserRole } from '@/api/types';
 interface AuthState {
   status: 'loading' | 'anonymous' | 'authenticated';
   user: CurrentUser | null;
-  signIn: (username: string, password: string) => Promise<void>;
+  signIn: () => Promise<void>;
   signOut: () => Promise<void>;
   /** True when the user's role is at least `role` in the user < manager < admin order. */
   can: (role: UserRole) => boolean;
+  authError: string | null;
 }
 
 const RANK: Record<UserRole, number> = { user: 0, manager: 1, admin: 2 };
@@ -38,14 +39,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<kc.Session | null>(() => kc.restore());
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [status, setStatus] = useState<AuthState['status']>(() =>
-    kc.restore() ? 'loading' : 'anonymous',
+    kc.isCallback() || kc.restore() ? 'loading' : 'anonymous',
   );
+  const [authError, setAuthError] = useState<string | null>(null);
 
   // The API client reads the token synchronously on every request, so it needs a
   // ref rather than a value captured in a closure. Every path that changes the
   // session updates both, which is why this is seeded once and never written
   // during render.
   const sessionRef = useRef(session);
+  const callbackHandled = useRef(false);
+
+  useEffect(() => {
+    if (!kc.isCallback() || callbackHandled.current) return;
+    callbackHandled.current = true;
+    let cancelled = false;
+    kc.completeSignIn()
+      .then((next) => {
+        if (cancelled) return;
+        const path = kc.returnPath();
+        sessionRef.current = next;
+        setSession(next);
+        setStatus('loading');
+        window.location.replace(path);
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        setAuthError(error instanceof kc.AuthError ? error.message : 'Не удалось войти в систему.');
+        window.history.replaceState(null, '', '/login');
+        setStatus('anonymous');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const endSession = useCallback(() => {
     kc.clear();
@@ -111,11 +138,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [session, endSession]);
 
-  const signIn = useCallback(async (username: string, password: string) => {
-    const next = await kc.signIn(username, password);
-    sessionRef.current = next;
-    setSession(next);
-    setStatus('loading');
+  const signIn = useCallback(async () => {
+    setAuthError(null);
+    await kc.beginSignIn();
   }, []);
 
   const signOut = useCallback(async () => {
@@ -131,8 +156,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signIn,
       signOut,
       can: (role) => (user ? RANK[user.role] >= RANK[role] : false),
+      authError,
     }),
-    [status, user, signIn, signOut],
+    [status, user, signIn, signOut, authError],
   );
 
   return <AuthContext value={value}>{children}</AuthContext>;
