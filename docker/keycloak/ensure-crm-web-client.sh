@@ -27,5 +27,16 @@ if [ -n "$client_id" ]; then
   echo "Updated Keycloak client crm-web"
 else
   "$KCADM" create clients -r crm -f "$CLIENT_FILE"
+  client_id=$("$KCADM" get clients -r crm -q clientId=crm-web --fields id --format csv --noquotes | tr -d '\r\n')
   echo "Created Keycloak client crm-web"
+fi
+
+# Production uses the web application's public domain rather than localhost.
+# Keep the checked-in client definition suitable for local development, then
+# reconcile the deployed redirect URI/origin when compose provides it.
+if [ -n "${CRM_WEB_ORIGIN:-}" ]; then
+  "$KCADM" update "clients/$client_id" -r crm \
+    -s "redirectUris=[\"${CRM_WEB_ORIGIN%/}/auth/callback\"]" \
+    -s "webOrigins=[\"${CRM_WEB_ORIGIN%/}\"]"
+  echo "Configured Keycloak client crm-web for ${CRM_WEB_ORIGIN%/}"
 fi

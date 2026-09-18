@@ -210,6 +210,8 @@ jobs:
             "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/docker/grafana/"
           scp -P "${DEPLOY_PORT:-22}" docker/keycloak/realm-export.json \
             "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/docker/keycloak/realm-export.json"
+          scp -P "${DEPLOY_PORT:-22}" docker/keycloak/crm-web-client.json docker/keycloak/ensure-crm-web-client.sh \
+            "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/docker/keycloak/"
 
       - name: Log in to GHCR on server
         env:
@@ -253,6 +255,15 @@ jobs:
             echo "compose startup failed; recent container logs follow"
             docker compose -f docker-compose.deploy.yml ps || true
             docker compose -f docker-compose.deploy.yml logs --tail=100 db keycloak minio redis api web caddy || true
+            exit 1
+          fi
+
+          # Realm imports are only applied to a new Keycloak database. Run the
+          # idempotent reconciliation explicitly so existing deployments get
+          # the browser client and the current application redirect URI too.
+          if ! docker compose -f docker-compose.deploy.yml run --rm keycloak-bootstrap; then
+            echo "Keycloak client bootstrap failed; recent Keycloak logs follow"
+            docker compose -f docker-compose.deploy.yml logs --tail=100 keycloak || true
             exit 1
           fi
 

@@ -41,6 +41,24 @@ services:
       timeout: 3s
       retries: 20
 
+  # Realm import is non-destructive and does not reconcile an existing
+  # database. This one-shot service guarantees that the browser client exists
+  # and has redirect/origin values for the deployed application domain.
+  keycloak-bootstrap:
+    image: quay.io/keycloak/keycloak:26.0
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    environment:
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD is required}
+      CRM_WEB_ORIGIN: https://${DOMAIN:?DOMAIN is required}
+    entrypoint: ["/bin/sh", "/opt/keycloak/data/import/ensure-crm-web-client.sh"]
+    volumes:
+      - ./docker/keycloak/crm-web-client.json:/opt/keycloak/data/import/crm-web-client.json:ro
+      - ./docker/keycloak/ensure-crm-web-client.sh:/opt/keycloak/data/import/ensure-crm-web-client.sh:ro
+    restart: "no"
+
   minio:
     image: quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z
     container_name: crm-minio
@@ -128,6 +146,8 @@ services:
     depends_on:
       api:
         condition: service_healthy
+      keycloak-bootstrap:
+        condition: service_completed_successfully
     environment:
       API_ORIGIN: http://api:8000
       KEYCLOAK_ORIGIN: http://keycloak:8080
