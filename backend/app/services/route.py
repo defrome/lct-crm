@@ -98,8 +98,17 @@ class RouteService:
     ) -> bool:
         if workflow_id is not None:
             workflow = await self.workflows.get_or_fail(workflow_id)
+            if workflow.counterparty_group != interaction.counterparty_group:
+                raise ValidationError(
+                    "Назначенный workflow относится к другой группе контрагентов",
+                    details={
+                        "workflow_id": str(workflow_id),
+                        "workflow_group": workflow.counterparty_group.value,
+                        "interaction_group": interaction.counterparty_group.value,
+                    },
+                )
         else:
-            default_workflow = await self.workflows.find_default()
+            default_workflow = await self.workflows.find_default(interaction.counterparty_group)
             if default_workflow is None:
                 return False
             workflow = default_workflow

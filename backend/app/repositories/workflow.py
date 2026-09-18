@@ -8,7 +8,7 @@ from typing import Any, ClassVar
 import sqlalchemy as sa
 from sqlalchemy.sql import Select
 
-from app.models.enums import WorkflowVersionStatus
+from app.models.enums import CounterpartyGroup, WorkflowVersionStatus
 from app.models.workflow import (
     InteractionStageHistory,
     Workflow,
@@ -34,20 +34,25 @@ class WorkflowRepository(BaseRepository[Workflow]):
             )
         )
 
-    async def find_default(self) -> Workflow | None:
-        """The workflow new cards are started on."""
+    async def find_default(self, counterparty_group: CounterpartyGroup) -> Workflow | None:
+        """The assigned workflow for new cards in one counterparty group."""
         return await self.session.scalar(
             sa.select(Workflow).where(
+                Workflow.counterparty_group == counterparty_group,
                 Workflow.is_default.is_(True),
                 Workflow.is_active.is_(True),
                 Workflow.deleted_at.is_(None),
             )
         )
 
-    async def clear_default(self, *, except_id: uuid.UUID | None = None) -> None:
-        """Demote the current default so a new one can take its place."""
+    async def clear_default(
+        self, counterparty_group: CounterpartyGroup, *, except_id: uuid.UUID | None = None
+    ) -> None:
+        """Demote the current assigned route for a counterparty group."""
         stmt = sa.select(Workflow).where(
-            Workflow.is_default.is_(True), Workflow.deleted_at.is_(None)
+            Workflow.counterparty_group == counterparty_group,
+            Workflow.is_default.is_(True),
+            Workflow.deleted_at.is_(None),
         )
         if except_id is not None:
             stmt = stmt.where(Workflow.id != except_id)

@@ -2497,7 +2497,7 @@
           "Взаимодействия"
         ],
         "summary": "Список взаимодействий",
-        "description": "Карточки «вуз + ИТ-направление + ИТ-продукт».\n\nРоль `user` видит карточки закреплённых за ним вузов и все карточки без назначенного ответственного. Поля `workflow_version_id` и `current_stage_id` зарезервированы под workflow-движок (SPEC-02) и пока всегда `null`.",
+        "description": "Карточки «вуз + ИТ-направление + ИТ-продукт».\n\nРоль `user` видит карточки закреплённых за ним вузов и все карточки без назначенного ответственного. При создании карточка автоматически получает опубликованный маршрут, назначенный её группе контрагента; `workflow_id` позволяет явно выбрать маршрут той же группы.",
         "operationId": "list_interactions_api_v1_interactions_get",
         "parameters": [
           {
@@ -3890,7 +3890,7 @@
           "Workflow: настройка"
         ],
         "summary": "Создать workflow",
-        "description": "Доступно ролям `manager` и `admin`. Создаётся пустой шаблон — этапы добавляются в черновик версии. Флаг `is_default` снимается с предыдущего workflow по умолчанию.",
+        "description": "Доступно ролям `manager` и `admin`. Создаётся пустой шаблон — этапы добавляются в черновик версии. Флаг `is_default` снимается с предыдущего назначенного workflow той же группы контрагентов.",
         "operationId": "create_workflow_api_v1_workflows_post",
         "requestBody": {
           "required": true,
@@ -4416,6 +4416,7 @@
           "Workflow: настройка"
         ],
         "summary": "Предварительный просмотр миграции карточек",
+        "description": "Показывает карточки, затрагиваемые публикацией новой версии, и этапы, для которых нужно указать сопоставление перед подтверждением миграции.",
         "operationId": "migration_preview_api_v1_workflows__workflow_id__versions__version_id__migration_preview_post",
         "parameters": [
           {
@@ -5069,7 +5070,7 @@
           "Workflow: настройка"
         ],
         "summary": "Удалить этап",
-        "description": "Только в черновике и только если на этапе не стоит ни одной карточки. Переходы, ведущие в этап и из него, удаляются вместе с ним.",
+        "description": "Только в черновике. Сначала запросите предпросмотр, выберите этап назначения и передайте `confirm=true`; карточки переносятся в одной транзакции. Переходы, ведущие в этап и из него, удаляются вместе с ним.",
         "operationId": "delete_stage_api_v1_workflow_stages__stage_id__delete",
         "parameters": [
           {
@@ -5217,6 +5218,70 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflow-stages/{stage_id}/delete-preview": {
+      "get": {
+        "tags": [
+          "Workflow: настройка"
+        ],
+        "summary": "Последствия удаления этапа",
+        "description": "Возвращает затрагиваемые карточки и ближайший этап, который интерфейс может предложить как назначение. Удаление выполняется отдельным подтверждённым запросом.",
+        "operationId": "stage_delete_preview_api_v1_workflow_stages__stage_id__delete_preview_get",
+        "parameters": [
+          {
+            "name": "stage_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Stage Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StageDeletePreview"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Доступ запрещён. Коды: ACCESS_DENIED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Объект не найден. Коды: NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -7663,6 +7728,15 @@
         "type": "object",
         "title": "ContactUpdate"
       },
+      "CounterpartyGroup": {
+        "type": "string",
+        "enum": [
+          "b2b",
+          "b2c"
+        ],
+        "title": "CounterpartyGroup",
+        "description": "Business segment a card and its workflow belong to (H-WF-02)."
+      },
       "CurrentUser": {
         "properties": {
           "id": {
@@ -8358,6 +8432,10 @@
             "format": "uuid",
             "title": "University Id"
           },
+          "counterparty_group": {
+            "$ref": "#/components/schemas/CounterpartyGroup",
+            "default": "b2b"
+          },
           "workflow_id": {
             "anyOf": [
               {
@@ -8507,6 +8585,9 @@
             "type": "string",
             "format": "uuid",
             "title": "University Id"
+          },
+          "counterparty_group": {
+            "$ref": "#/components/schemas/CounterpartyGroup"
           },
           "university": {
             "anyOf": [
@@ -8691,6 +8772,7 @@
         "required": [
           "id",
           "university_id",
+          "counterparty_group",
           "it_direction_id",
           "it_product_id",
           "responsible_user_id",
@@ -10254,6 +10336,51 @@
         ],
         "title": "StageCreate"
       },
+      "StageDeletePreview": {
+        "properties": {
+          "stage_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Stage Id"
+          },
+          "workflow_version_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Workflow Version Id"
+          },
+          "affected_count": {
+            "type": "integer",
+            "title": "Affected Count"
+          },
+          "interaction_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Interaction Ids"
+          },
+          "suggested_target_stage_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggested Target Stage Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stage_id",
+          "workflow_version_id",
+          "affected_count"
+        ],
+        "title": "StageDeletePreview"
+      },
       "StageDeleteRequest": {
         "properties": {
           "target_stage_id": {
@@ -11442,6 +11569,10 @@
             ],
             "title": "Description"
           },
+          "counterparty_group": {
+            "$ref": "#/components/schemas/CounterpartyGroup",
+            "default": "b2b"
+          },
           "is_default": {
             "type": "boolean",
             "title": "Is Default",
@@ -11518,6 +11649,9 @@
             ],
             "title": "Description"
           },
+          "counterparty_group": {
+            "$ref": "#/components/schemas/CounterpartyGroup"
+          },
           "is_default": {
             "type": "boolean",
             "title": "Is Default"
@@ -11542,6 +11676,7 @@
           "id",
           "name",
           "description",
+          "counterparty_group",
           "is_default",
           "is_active",
           "created_at",
@@ -11596,6 +11731,16 @@
               }
             ],
             "title": "Is Active"
+          },
+          "counterparty_group": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CounterpartyGroup"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",

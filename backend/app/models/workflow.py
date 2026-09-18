@@ -31,8 +31,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base, DomainBase
 from app.models.enums import (
     ATTACHMENT_FORMAT_ENUM,
+    COUNTERPARTY_GROUP_ENUM,
     WORKFLOW_VERSION_STATUS_ENUM,
     AttachmentFormat,
+    CounterpartyGroup,
     WorkflowVersionStatus,
 )
 
@@ -45,6 +47,16 @@ class Workflow(DomainBase):
     name: Mapped[str] = mapped_column(sa.Text, nullable=False)
     name_normalized: Mapped[str] = mapped_column(sa.Text, nullable=False)
     description: Mapped[str | None] = mapped_column(sa.Text, default=None)
+    counterparty_group: Mapped[CounterpartyGroup] = mapped_column(
+        sa.Enum(
+            CounterpartyGroup,
+            name=COUNTERPARTY_GROUP_ENUM,
+            values_callable=lambda e: [member.value for member in e],
+        ),
+        nullable=False,
+        default=CounterpartyGroup.B2B,
+        server_default=CounterpartyGroup.B2B.value,
+    )
     # The workflow new interactions are started on when nothing else is chosen.
     is_default: Mapped[bool] = mapped_column(
         sa.Boolean, nullable=False, default=False, server_default=sa.false()
@@ -64,10 +76,10 @@ class Workflow(DomainBase):
             unique=True,
             postgresql_where=sa.text("deleted_at IS NULL"),
         ),
-        # At most one default workflow among live rows.
+        # At most one assigned route per counterparty group among live rows.
         sa.Index(
-            "uq_workflows_single_default",
-            sa.text("(is_default)"),
+            "uq_workflows_default_per_counterparty_group",
+            "counterparty_group",
             unique=True,
             postgresql_where=sa.text("is_default AND deleted_at IS NULL"),
         ),

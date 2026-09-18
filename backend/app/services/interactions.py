@@ -92,6 +92,7 @@ class InteractionService:
         await self.universities.get_or_fail(data.university_id)
         interaction = Interaction(
             university_id=data.university_id,
+            counterparty_group=data.counterparty_group,
             it_direction_id=data.it_direction_id,
             it_product_id=data.it_product_id,
             responsible_user_id=data.responsible_user_id,

@@ -25,6 +25,7 @@ from app.schemas.workflow import (
     PublishRequest,
     StageCardCount,
     StageCreate,
+    StageDeletePreview,
     StageDeleteRequest,
     StageRead,
     StageRename,
@@ -103,7 +104,8 @@ async def get_workflow(
     summary="Создать workflow",
     description=(
         "Доступно ролям `manager` и `admin`. Создаётся пустой шаблон — этапы добавляются "
-        "в черновик версии. Флаг `is_default` снимается с предыдущего workflow по умолчанию."
+        "в черновик версии. Флаг `is_default` снимается с предыдущего назначенного "
+        "workflow той же группы контрагентов."
     ),
     responses=CATALOG_ERRORS,
 )
@@ -114,7 +116,10 @@ async def create_workflow(
     _: CurrentUser = Depends(require_manager),
 ) -> WorkflowRead:
     workflow = await WorkflowService(session, scope).create(
-        name=data.name, description=data.description, is_default=data.is_default
+        name=data.name,
+        description=data.description,
+        counterparty_group=data.counterparty_group,
+        is_default=data.is_default,
     )
     return WorkflowRead.model_validate(workflow)
 
@@ -419,8 +424,9 @@ async def update_stage_structure(
     response_model=None,
     summary="Удалить этап",
     description=(
-        "Только в черновике и только если на этапе не стоит ни одной карточки. "
-        "Переходы, ведущие в этап и из него, удаляются вместе с ним."
+        "Только в черновике. Сначала запросите предпросмотр, выберите этап назначения "
+        "и передайте `confirm=true`; карточки переносятся в одной транзакции. Переходы, "
+        "ведущие в этап и из него, удаляются вместе с ним."
     ),
     responses=STRUCTURE_ERRORS,
 )
@@ -431,12 +437,29 @@ async def delete_stage(
     scope: ScopeDep,
     _: CurrentUser = Depends(require_manager),
 ) -> None:
-    if not data.confirm:
-        from app.core.errors import ValidationError
-
-        raise ValidationError("Удаление этапа требует явного подтверждения")
     await WorkflowService(session, scope).delete_stage(
-        stage_id, target_stage_id=data.target_stage_id
+        stage_id, target_stage_id=data.target_stage_id, confirm=data.confirm
+    )
+
+
+@stages_router.get(
+    "/{stage_id}/delete-preview",
+    response_model=StageDeletePreview,
+    summary="Последствия удаления этапа",
+    description=(
+        "Возвращает затрагиваемые карточки и ближайший этап, который интерфейс может "
+        "предложить как назначение. Удаление выполняется отдельным подтверждённым запросом."
+    ),
+    responses=READ_ERRORS,
+)
+async def stage_delete_preview(
+    stage_id: uuid.UUID,
+    session: SessionDep,
+    scope: ScopeDep,
+    _: CurrentUser = Depends(require_manager),
+) -> StageDeletePreview:
+    return StageDeletePreview.model_validate(
+        await WorkflowService(session, scope).stage_delete_preview(stage_id)
     )
 
 

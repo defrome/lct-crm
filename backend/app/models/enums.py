@@ -52,6 +52,13 @@ class WorkflowVersionStatus(StrEnum):
     ARCHIVED = "archived"
 
 
+class CounterpartyGroup(StrEnum):
+    """Business segment a card and its workflow belong to (H-WF-02)."""
+
+    B2B = "b2b"
+    B2C = "b2c"
+
+
 class AttachmentFormat(StrEnum):
     """The ten formats the customer requires for stage attachments (FR-04)."""
 
@@ -112,6 +119,7 @@ IMPORT_JOB_STATUS_ENUM = "import_job_status"
 IMPORT_ROW_STATUS_ENUM = "import_row_status"
 AUDIT_ACTION_ENUM = "audit_action"
 WORKFLOW_VERSION_STATUS_ENUM = "workflow_version_status"
+COUNTERPARTY_GROUP_ENUM = "counterparty_group"
 INTEGRATION_SOURCE_ENUM = "integration_source"
 INTEGRATION_MODE_ENUM = "integration_mode"
 INTEGRATION_SYNC_STATUS_ENUM = "integration_sync_status"

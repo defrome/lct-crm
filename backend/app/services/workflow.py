@@ -26,7 +26,7 @@ from app.core.errors import (
     ValidationError,
     WorkflowVersionLockedError,
 )
-from app.models.enums import AuditAction, WorkflowVersionStatus
+from app.models.enums import AuditAction, CounterpartyGroup, WorkflowVersionStatus
 from app.models.workflow import (
     InteractionStageHistory,
     Workflow,
@@ -70,6 +70,7 @@ class WorkflowService:
         name: str,
         description: str | None = None,
         is_default: bool = False,
+        counterparty_group: CounterpartyGroup = CounterpartyGroup.B2B,
     ) -> Workflow:
         cleaned = clean_text(name)
         if not cleaned:
@@ -79,12 +80,13 @@ class WorkflowService:
                 "Workflow с таким названием уже существует", details={"name": cleaned}
             )
         if is_default:
-            await self.repo.clear_default()
+            await self.repo.clear_default(counterparty_group)
 
         workflow = Workflow(
             name=cleaned,
             name_normalized=normalize_name(cleaned),
             description=clean_text(description),
+            counterparty_group=counterparty_group,
             is_default=is_default,
         )
         self.repo.add(workflow)
@@ -105,8 +107,20 @@ class WorkflowService:
             patch["name_normalized"] = normalize_name(name)
         if "description" in patch:
             patch["description"] = clean_text(patch["description"])
+        if "counterparty_group" in patch:
+            patch["counterparty_group"] = CounterpartyGroup(patch["counterparty_group"])
+            if (
+                patch["counterparty_group"] != workflow.counterparty_group
+                and workflow.is_default
+                and patch.get("is_default") is not False
+            ):
+                raise ValidationError(
+                    "Сначала снимите назначение маршрута, затем измените группу контрагентов"
+                )
         if patch.get("is_default"):
-            await self.repo.clear_default(except_id=workflow_id)
+            await self.repo.clear_default(
+                patch.get("counterparty_group", workflow.counterparty_group), except_id=workflow_id
+            )
 
         apply_patch(workflow, patch)
         async with integrity_guard(
@@ -341,7 +355,14 @@ class WorkflowService:
                     "interaction_ids": [
                         item["interaction_id"] for item in preview["affected_cards"]
                     ],
-                    "stage_mappings": stage_mappings or {},
+                    "stage_mappings": [
+                        {
+                            "interaction_id": item["interaction_id"],
+                            "from_stage_id": item["from_stage_id"],
+                            "to_stage_id": item["to_stage_id"],
+                        }
+                        for item in preview["affected_cards"]
+                    ],
                 },
             )
         async with integrity_guard(
@@ -493,14 +514,52 @@ class WorkflowService:
             await self.session.commit()
         return stage
 
+    async def stage_delete_preview(self, stage_id: uuid.UUID) -> dict[str, Any]:
+        """Return impact and a nearby target before the destructive operation."""
+        stage = await self.stages.get_or_fail(stage_id)
+        cards = await self.stages.cards_on_stage(stage_id)
+        alternatives = [
+            item
+            for item in await self.stages.list_for_version(stage.workflow_version_id)
+            if item.id != stage_id
+        ]
+        suggested = min(
+            alternatives,
+            key=lambda item: (
+                abs(item.order_index - stage.order_index),
+                item.order_index,
+                str(item.id),
+            ),
+            default=None,
+        )
+        return {
+            "stage_id": stage.id,
+            "workflow_version_id": stage.workflow_version_id,
+            "affected_count": len(cards),
+            "interaction_ids": [card.id for card in cards],
+            "suggested_target_stage_id": suggested.id if suggested else None,
+        }
+
     async def delete_stage(
-        self, stage_id: uuid.UUID, *, target_stage_id: uuid.UUID | None = None
+        self,
+        stage_id: uuid.UUID,
+        *,
+        target_stage_id: uuid.UUID | None = None,
+        confirm: bool = False,
     ) -> None:
         stage = await self.stages.get_or_fail(stage_id)
         version = await self.versions.get_or_fail(stage.workflow_version_id)
         self._require_draft(version)
 
         cards = await self.stages.cards_on_stage(stage_id)
+        if not confirm:
+            raise ValidationError(
+                "Удаление этапа требует явного подтверждения",
+                details={
+                    "affected_count": len(cards),
+                    "interaction_ids": [str(card.id) for card in cards],
+                },
+            )
         if target_stage_id is None:
             raise ValidationError(
                 "Для удаления этапа необходимо выбрать этап назначения",
@@ -531,19 +590,18 @@ class WorkflowService:
                 await self.transitions.soft_delete(transition)
         await self.stages.soft_delete(stage)
         await self.session.flush()
-        if cards:
-            await log_event(
-                self.session,
-                action=AuditAction.UPDATE,
-                entity_type="workflow_stage_bulk_transfer",
-                entity_id=stage.id,
-                changes={
-                    "from_stage_id": stage.id,
-                    "to_stage_id": target.id,  # type: ignore[union-attr]
-                    "affected_count": len(cards),
-                    "interaction_ids": [card.id for card in cards],
-                },
-            )
+        await log_event(
+            self.session,
+            action=AuditAction.UPDATE,
+            entity_type="workflow_stage_bulk_transfer",
+            entity_id=stage.id,
+            changes={
+                "from_stage_id": stage.id,
+                "to_stage_id": target.id,  # type: ignore[union-attr]
+                "affected_count": len(cards),
+                "interaction_ids": [card.id for card in cards],
+            },
+        )
         await self.session.commit()
 
     # -- transitions --------------------------------------------------------

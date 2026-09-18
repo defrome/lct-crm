@@ -7,7 +7,7 @@ import uuid
 
 from pydantic import BaseModel, Field
 
-from app.models.enums import AttachmentFormat, WorkflowVersionStatus
+from app.models.enums import AttachmentFormat, CounterpartyGroup, WorkflowVersionStatus
 from app.schemas.common import ORMModel
 
 # --- templates and versions ------------------------------------------------
@@ -16,6 +16,7 @@ from app.schemas.common import ORMModel
 class WorkflowCreate(BaseModel):
     name: str = Field(min_length=1, max_length=300, examples=["Базовый процесс работы с вузом"])
     description: str | None = None
+    counterparty_group: CounterpartyGroup = CounterpartyGroup.B2B
     is_default: bool = Field(
         default=False, description="Workflow, на который автоматически встают новые карточки"
     )
@@ -26,12 +27,14 @@ class WorkflowUpdate(BaseModel):
     description: str | None = None
     is_default: bool | None = None
     is_active: bool | None = None
+    counterparty_group: CounterpartyGroup | None = None
 
 
 class WorkflowRead(ORMModel):
     id: uuid.UUID
     name: str
     description: str | None
+    counterparty_group: CounterpartyGroup
     is_default: bool
     is_active: bool
     created_at: dt.datetime
@@ -93,6 +96,14 @@ class PublishRequest(MigrationPreviewRequest):
 class StageDeleteRequest(BaseModel):
     target_stage_id: uuid.UUID
     confirm: bool = False
+
+
+class StageDeletePreview(BaseModel):
+    stage_id: uuid.UUID
+    workflow_version_id: uuid.UUID
+    affected_count: int
+    interaction_ids: list[uuid.UUID] = Field(default_factory=list)
+    suggested_target_stage_id: uuid.UUID | None = None
 
 
 # --- stages ----------------------------------------------------------------

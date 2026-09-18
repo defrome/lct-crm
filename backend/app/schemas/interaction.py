@@ -7,6 +7,7 @@ import uuid
 
 from pydantic import BaseModel, Field
 
+from app.models.enums import CounterpartyGroup
 from app.schemas.common import ORMModel
 from app.schemas.product import DirectionRead, ProductRead
 from app.schemas.university import UniversityShort
@@ -15,6 +16,7 @@ from app.schemas.user import UserShort
 
 class InteractionCreate(BaseModel):
     university_id: uuid.UUID
+    counterparty_group: CounterpartyGroup = CounterpartyGroup.B2B
     workflow_id: uuid.UUID | None = Field(
         default=None,
         description=(
@@ -52,6 +54,7 @@ class InteractionUpdate(BaseModel):
 class InteractionRead(ORMModel):
     id: uuid.UUID
     university_id: uuid.UUID
+    counterparty_group: CounterpartyGroup
     university: UniversityShort | None = None
     it_direction_id: uuid.UUID | None
     it_direction: DirectionRead | None = None

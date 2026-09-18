@@ -9,6 +9,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import DomainBase
+from app.models.enums import COUNTERPARTY_GROUP_ENUM, CounterpartyGroup
 from app.models.product import ITDirection, ITProduct
 from app.models.university import University
 from app.models.user import User
@@ -27,6 +28,19 @@ class Interaction(DomainBase):
 
     university_id: Mapped[uuid.UUID] = mapped_column(
         sa.ForeignKey("universities.id", ondelete="RESTRICT"), nullable=False
+    )
+    # Current interaction cards are university cards, so B2B is the stable
+    # default. Keeping it on the card makes the workflow selection explicit
+    # and leaves room for the B2C card type without changing existing routes.
+    counterparty_group: Mapped[CounterpartyGroup] = mapped_column(
+        sa.Enum(
+            CounterpartyGroup,
+            name=COUNTERPARTY_GROUP_ENUM,
+            values_callable=lambda e: [member.value for member in e],
+        ),
+        nullable=False,
+        default=CounterpartyGroup.B2B,
+        server_default=CounterpartyGroup.B2B.value,
     )
     it_direction_id: Mapped[uuid.UUID | None] = mapped_column(
         sa.ForeignKey("it_directions.id", ondelete="RESTRICT"), default=None

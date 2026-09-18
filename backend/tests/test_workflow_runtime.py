@@ -12,7 +12,7 @@ from app.core.errors import (
     ValidationError,
     WorkflowInvalidTransitionError,
 )
-from app.models.enums import AuditAction
+from app.models.enums import AuditAction, CounterpartyGroup
 from app.schemas.interaction import InteractionCreate
 from app.schemas.university import AssignmentCreate, UniversityCreate
 from app.services.assignments import AssignmentService
@@ -155,7 +155,7 @@ async def test_published_new_version_does_not_reroute_a_running_card(session, sc
     service = WorkflowService(session, scope)
     draft = await service.create_draft(workflow.id, clone_from_id=old_version.id)
     cloned = {stage.code: stage for stage in await service.list_stages(draft.id)}
-    await service.delete_stage(cloned["WF-03"].id, target_stage_id=cloned["WF-04"].id)
+    await service.delete_stage(cloned["WF-03"].id, target_stage_id=cloned["WF-04"].id, confirm=True)
     await service.publish(draft.id)
 
     route = RouteService(session, scope)
@@ -216,12 +216,74 @@ async def test_stage_delete_transfers_cards_to_selected_target(session, scope):
     interaction.current_stage_id = draft_stages["WF-01"].id
     await session.commit()
 
-    with pytest.raises(ValidationError):
-        await service.delete_stage(draft_stages["WF-01"].id)
+    preview = await service.stage_delete_preview(draft_stages["WF-01"].id)
+    assert preview["affected_count"] == 1
+    assert preview["interaction_ids"] == [interaction.id]
+    assert preview["suggested_target_stage_id"] == draft_stages["WF-02"].id
 
-    await service.delete_stage(draft_stages["WF-01"].id, target_stage_id=draft_stages["WF-02"].id)
+    with pytest.raises(ValidationError):
+        await service.delete_stage(
+            draft_stages["WF-01"].id, target_stage_id=draft_stages["WF-02"].id
+        )
+
+    with pytest.raises(ValidationError):
+        await service.delete_stage(draft_stages["WF-01"].id, confirm=True)
+
+    await service.delete_stage(
+        draft_stages["WF-01"].id,
+        target_stage_id=draft_stages["WF-02"].id,
+        confirm=True,
+    )
     refreshed = await InteractionService(session, scope).get(interaction.id)
     assert refreshed.current_stage_id == draft_stages["WF-02"].id
+    entries, total = await search_audit_log(
+        session, entity_type="workflow_stage_bulk_transfer", action=AuditAction.UPDATE
+    )
+    assert total == 1
+    assert entries[0].changes["from_stage_id"] == str(draft_stages["WF-01"].id)
+    assert entries[0].changes["to_stage_id"] == str(draft_stages["WF-02"].id)
+    assert entries[0].changes["affected_count"] == 1
+
+
+async def test_cards_use_the_workflow_assigned_to_their_counterparty_group(session, scope):
+    b2b_workflow = await ensure_base_workflow(session, scope)
+    b2b_version, b2b_stages = await _stages(session, scope, b2b_workflow)
+
+    service = WorkflowService(session, scope)
+    b2c_workflow = await service.create(
+        name="Маршрут B2C", counterparty_group=CounterpartyGroup.B2C, is_default=True
+    )
+    b2c_draft = await service.create_draft(b2c_workflow.id)
+    b2c_stage = await service.add_stage(b2c_draft.id, name="Новая заявка B2C", is_initial=True)
+    await service.publish(b2c_draft.id)
+
+    _, b2b_card = await _card(session, scope, "Вуз B2B")
+    b2c_university = await UniversityService(session, scope).create(
+        UniversityCreate(name="Вуз B2C")
+    )
+    b2c_card = await InteractionService(session, scope).create(
+        InteractionCreate(
+            university_id=b2c_university.id,
+            counterparty_group=CounterpartyGroup.B2C,
+        )
+    )
+
+    assert b2b_card.workflow_version_id == b2b_version.id
+    assert b2b_card.current_stage_id == b2b_stages["WF-01"].id
+    assert b2c_card.workflow_version_id == b2c_draft.id
+    assert b2c_card.current_stage_id == b2c_stage.id
+
+    wrong_group_university = await UniversityService(session, scope).create(
+        UniversityCreate(name="Вуз с ошибочным маршрутом")
+    )
+    with pytest.raises(ValidationError):
+        await InteractionService(session, scope).create(
+            InteractionCreate(
+                university_id=wrong_group_university.id,
+                counterparty_group=CounterpartyGroup.B2B,
+                workflow_id=b2c_workflow.id,
+            )
+        )
 
 
 async def test_renaming_a_stage_does_not_disturb_a_card_standing_on_it(session, scope):
@@ -242,6 +304,67 @@ async def test_renaming_a_stage_does_not_disturb_a_card_standing_on_it(session, 
         interaction.id, to_stage_id=stages["WF-02"].id, comment="переход после переименования"
     )
     assert moved.current_stage_id == stages["WF-02"].id
+
+
+async def test_only_admin_can_confirm_rename_of_published_stage(
+    session, client, admin_user, manager_user, scope
+):
+    workflow = await ensure_base_workflow(session, scope)
+    _, stages = await _stages(session, scope, workflow)
+    stage = stages["WF-01"]
+
+    denied = await client.patch(
+        f"/api/v1/workflow-stages/{stage.id}",
+        json={"name": "Новое название", "confirm": True},
+        headers=auth(manager_user),
+    )
+    assert denied.status_code == 403
+
+    unconfirmed = await client.patch(
+        f"/api/v1/workflow-stages/{stage.id}",
+        json={"name": "Новое название"},
+        headers=auth(admin_user),
+    )
+    assert unconfirmed.status_code == 422
+    assert unconfirmed.json()["error"]["details"]["current_name"] == stage.name
+
+    renamed = await client.patch(
+        f"/api/v1/workflow-stages/{stage.id}",
+        json={"name": "Новое название", "confirm": True},
+        headers=auth(admin_user),
+    )
+    assert renamed.status_code == 200
+    entries, total = await search_audit_log(
+        session, entity_type="workflow_stage_rename", action=AuditAction.UPDATE
+    )
+    assert total == 1
+    assert entries[0].changes["old"]["name"] == stage.name
+    assert entries[0].changes["new"]["name"] == "Новое название"
+
+
+async def test_stage_delete_preview_api_requires_explicit_confirmation(
+    session, client, manager_user, scope
+):
+    workflow = await ensure_base_workflow(session, scope)
+    version, _ = await _stages(session, scope, workflow)
+    service = WorkflowService(session, scope)
+    draft = await service.create_draft(workflow.id, clone_from_id=version.id)
+    draft_stages = {stage.code: stage for stage in await service.list_stages(draft.id)}
+
+    preview = await client.get(
+        f"/api/v1/workflow-stages/{draft_stages['WF-01'].id}/delete-preview",
+        headers=auth(manager_user),
+    )
+    assert preview.status_code == 200
+    assert preview.json()["suggested_target_stage_id"] == str(draft_stages["WF-02"].id)
+
+    refused = await client.request(
+        "DELETE",
+        f"/api/v1/workflow-stages/{draft_stages['WF-01'].id}",
+        json={"target_stage_id": str(draft_stages["WF-02"].id)},
+        headers=auth(manager_user),
+    )
+    assert refused.status_code == 422
 
 
 async def test_transition_is_audited(session, scope):
