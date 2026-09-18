@@ -24,7 +24,17 @@ counterparty_group = postgresql.ENUM("b2b", "b2c", name="counterparty_group", cr
 
 
 def upgrade() -> None:
-    counterparty_group.create(op.get_bind(), checkfirst=True)
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            CREATE TYPE counterparty_group AS ENUM ('b2b', 'b2c');
+        EXCEPTION
+            WHEN duplicate_object THEN NULL;
+        END
+        $$;
+        """
+    )
     op.add_column(
         "workflows",
         sa.Column("counterparty_group", counterparty_group, nullable=False, server_default="b2b"),
