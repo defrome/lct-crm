@@ -46,6 +46,22 @@ services:
       timeout: 3s
       retries: 20
 
+  # Realm import is deliberately non-destructive and therefore does not update
+  # an existing database. This one-shot service reconciles the browser client.
+  keycloak-bootstrap:
+    image: quay.io/keycloak/keycloak:26.0
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    entrypoint: ["/bin/sh", "/opt/keycloak/data/import/ensure-crm-web-client.sh"]
+    volumes:
+      - ./docker/keycloak/crm-web-client.json:/opt/keycloak/data/import/crm-web-client.json:ro
+      - ./docker/keycloak/ensure-crm-web-client.sh:/opt/keycloak/data/import/ensure-crm-web-client.sh:ro
+    restart: "no"
+
   minio:
     image: quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z
     container_name: crm-minio
@@ -145,6 +161,8 @@ services:
     depends_on:
       api:
         condition: service_healthy
+      keycloak-bootstrap:
+        condition: service_completed_successfully
     environment:
       # nginx внутри контейнера проксирует эти два origin'а под своим доменом,
       # поэтому браузер видит только same-origin запросы: у API нет CORS, а в

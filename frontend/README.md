@@ -15,6 +15,10 @@
 Нужен поднятый бэкенд: `docker compose up -d` в корне репозитория
 (API на `:8000`, Keycloak на `:8080`, Postgres на `:5432`).
 
+После обновления существующего локального контура один раз выполните
+`docker compose up -d keycloak-bootstrap`: сервис добавит или обновит
+public-клиент `crm-web` без удаления realm и данных.
+
 ```bash
 npm ci
 npm run dev          # http://localhost:5173
