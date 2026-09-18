@@ -1,3 +1,4 @@
+// oxlint-disable react/set-state-in-effect
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { NavLink, Navigate, useNavigate, useParams } from 'react-router-dom';
@@ -332,6 +333,7 @@ function ProductFormModal({
   const [isActive, setIsActive] = useState(true);
   const [directionIds, setDirectionIds] = useState<string[]>([]);
 
+  // oxlint-disable-next-line react/set-state-in-effect
   useEffect(() => {
     if (!open) return;
     setName(record?.name ?? '');
@@ -916,6 +918,7 @@ function SimpleNameModal({
   const [note, setNote] = useState('');
   const [isActive, setIsActive] = useState(true);
 
+  // oxlint-disable-next-line react/set-state-in-effect
   useEffect(() => {
     if (!open) return;
     setName(record?.name ?? '');

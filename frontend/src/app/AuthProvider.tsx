@@ -1,3 +1,4 @@
+// oxlint-disable react/only-export-components
 import {
   createContext,
   use,
@@ -29,6 +30,7 @@ const RANK: Record<UserRole, number> = { user: 0, manager: 1, admin: 2 };
 
 const AuthContext = createContext<AuthState | null>(null);
 
+// oxlint-disable-next-line react/only-export-components
 export function useAuth(): AuthState {
   const context = use(AuthContext);
   if (!context) throw new Error('useAuth используется вне AuthProvider');

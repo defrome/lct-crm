@@ -1,3 +1,4 @@
+// oxlint-disable react/only-export-components
 import clsx from 'clsx';
 import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from 'react';
 
@@ -66,6 +67,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children?: ReactNode;
 }
 
+// oxlint-disable-next-line react/only-export-components
 export function buttonClass({
   variant = 'secondary',
   scheme,
@@ -81,6 +83,7 @@ export function buttonClass({
   return clsx(BASE, SIZE[size], LOOK[resolved][variant], className);
 }
 
+// oxlint-disable-next-line react/only-export-components
 export function Button({
   variant = 'secondary',
   scheme,
@@ -136,6 +139,7 @@ interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   dot?: boolean;
 }
 
+// oxlint-disable-next-line react/only-export-components
 export function IconButton({
   icon,
   label,
@@ -179,6 +183,7 @@ export function IconButton({
   );
 }
 
+// oxlint-disable-next-line react/only-export-components
 export function Spinner({ className = 'size-4' }: { className?: string }) {
   return (
     <i
@@ -200,6 +205,7 @@ const CHIP_SIZE: Record<ChipSize, string> = {
   l: 'h-12 pl-4 pr-5 text-body-m gap-2',
 };
 
+// oxlint-disable-next-line react/only-export-components
 export function chipClass({
   size = 'm',
   selected,

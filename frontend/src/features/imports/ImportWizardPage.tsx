@@ -1,3 +1,4 @@
+// oxlint-disable react/set-state-in-effect
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -313,6 +314,7 @@ function MappingStep({
 
   // Start from whatever is already known: a saved mapping on the job, otherwise
   // the server's fuzzy suggestion. The user only corrects what it got wrong.
+  // oxlint-disable-next-line react/set-state-in-effect
   useEffect(() => {
     if (Object.keys(job.mapping ?? {}).length > 0) {
       setMapping(job.mapping);

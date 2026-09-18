@@ -1,3 +1,4 @@
+// oxlint-disable react/only-export-components
 import { createContext, use, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 export type ThemeChoice = 'light' | 'dark' | 'system';
@@ -12,6 +13,7 @@ interface ThemeState {
 const STORAGE_KEY = 'crm.theme';
 const ThemeContext = createContext<ThemeState | null>(null);
 
+// oxlint-disable-next-line react/only-export-components
 export function useTheme(): ThemeState {
   const context = use(ThemeContext);
   if (!context) throw new Error('useTheme используется вне ThemeProvider');

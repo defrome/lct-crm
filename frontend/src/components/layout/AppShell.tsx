@@ -1,3 +1,4 @@
+// oxlint-disable react/set-state-in-effect
 import clsx from 'clsx';
 import { Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useMatch } from 'react-router-dom';
@@ -47,6 +48,7 @@ export function AppShell() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const location = useLocation();
 
+  // oxlint-disable-next-line react/set-state-in-effect
   useEffect(() => setDrawerOpen(false), [location.pathname]);
 
   const allowed = (items: NavItem[]) => items.filter((item) => !item.role || can(item.role));

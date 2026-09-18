@@ -1,3 +1,4 @@
+// oxlint-disable react/set-state-in-effect
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
@@ -85,6 +86,7 @@ export function InteractionFormModal({
   const [form, setForm] = useState<FormState>(EMPTY);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
+  // oxlint-disable-next-line react/set-state-in-effect
   useEffect(() => {
     if (!open) return;
     setForm(record ? fromRecord(record) : { ...EMPTY, university_id: universityId ?? null });

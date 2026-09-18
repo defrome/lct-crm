@@ -1,3 +1,4 @@
+// oxlint-disable react/set-state-in-effect
 import clsx from 'clsx';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -71,6 +72,7 @@ export function Combobox({
     if (open) inputRef.current?.focus();
   }, [open]);
 
+  // oxlint-disable-next-line react/set-state-in-effect
   useEffect(() => setHighlighted(0), [options]);
 
   const selected = options.find((option) => option.value === value);

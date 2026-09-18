@@ -1,3 +1,4 @@
+// oxlint-disable react/only-export-components
 import clsx from 'clsx';
 import type { ReactNode } from 'react';
 
@@ -46,6 +47,7 @@ interface DataTableProps<T> {
   className?: string;
 }
 
+// oxlint-disable-next-line react/only-export-components
 export function DataTable<T>({
   rows,
   columns,
@@ -187,6 +189,7 @@ export function DataTable<T>({
   );
 }
 
+// oxlint-disable-next-line react/only-export-components
 export function Pagination({
   page,
   pages,

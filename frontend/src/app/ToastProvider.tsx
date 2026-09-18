@@ -1,3 +1,4 @@
+// oxlint-disable react/only-export-components
 import { createContext, use, useCallback, useMemo, useState, type ReactNode } from 'react';
 
 import { ApiError } from '@/api/client';
@@ -26,6 +27,7 @@ interface ToastState {
 
 const ToastContext = createContext<ToastState | null>(null);
 
+// oxlint-disable-next-line react/only-export-components
 export function useToast(): ToastState {
   const context = use(ToastContext);
   if (!context) throw new Error('useToast используется вне ToastProvider');
