@@ -63,9 +63,7 @@ def test_parses_headers_and_skips_blank_rows():
 
 def test_skips_generated_report_metadata_row():
     metadata = "Отбор: без ограничений. Записей: 4. Сформирован 18 сентября 2026 г."
-    content = make_xlsx(
-        [catalog_row("Вуз А"), [metadata] + [None] * (len(CATALOG_HEADERS) - 1)]
-    )
+    content = make_xlsx([catalog_row("Вуз А"), [metadata] + [None] * (len(CATALOG_HEADERS) - 1)])
 
     parsed = parse_file(content, "report.xlsx")
 
