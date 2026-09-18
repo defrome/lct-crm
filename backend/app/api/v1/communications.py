@@ -45,7 +45,14 @@ async def stop_notification_worker() -> None:
         _notification_task = None
 
 
-@router.get("/notification-rules", response_model=list[NotificationRuleRead])
+@router.get(
+    "/notification-rules",
+    response_model=list[NotificationRuleRead],
+    summary="Список правил уведомлений",
+    description=(
+        "Правила автоматических уведомлений для переходов workflow в доступных пользователю вузах."
+    ),
+)
 async def rules(session: SessionDep, scope: ScopeDep) -> list[NotificationRuleRead]:
     return [
         NotificationRuleRead.model_validate(x)
@@ -54,7 +61,13 @@ async def rules(session: SessionDep, scope: ScopeDep) -> list[NotificationRuleRe
 
 
 @router.post(
-    "/notification-rules", response_model=NotificationRuleRead, status_code=status.HTTP_201_CREATED
+    "/notification-rules",
+    response_model=NotificationRuleRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Создать правило уведомлений",
+    description=(
+        "Создаёт правило автоматического уведомления для перехода workflow. Доступно менеджеру."
+    ),
 )
 async def create_rule(
     data: NotificationRuleCreate,
@@ -67,21 +80,37 @@ async def create_rule(
     )
 
 
-@router.post("/notifications/run-stalled")
+@router.post(
+    "/notifications/run-stalled",
+    summary="Проверить просроченные переходы",
+    description=(
+        "Создаёт ожидающие уведомления для карточек с просроченными переходами workflow. "
+        "Доступно менеджеру."
+    ),
+)
 async def run_stalled(
     session: SessionDep, scope: ScopeDep, _: CurrentUser = Depends(require_manager)
 ) -> dict[str, int]:
     return {"created": await CommunicationService(session, scope).check_stalled()}
 
 
-@router.post("/notifications/deliver")
+@router.post(
+    "/notifications/deliver",
+    summary="Отправить ожидающие уведомления",
+    description="Обрабатывает очередь ожидающих уведомлений. Доступно менеджеру.",
+)
 async def deliver(
     session: SessionDep, scope: ScopeDep, _: CurrentUser = Depends(require_manager)
 ) -> dict[str, int]:
     return {"processed": await CommunicationService(session, scope).deliver_pending()}
 
 
-@router.get("/interactions/{interaction_id}/messages", response_model=list[ChatMessageRead])
+@router.get(
+    "/interactions/{interaction_id}/messages",
+    response_model=list[ChatMessageRead],
+    summary="Сообщения по взаимодействию",
+    description="Возвращает историю сообщений для указанного взаимодействия.",
+)
 async def messages(
     interaction_id: uuid.UUID, session: SessionDep, scope: ScopeDep
 ) -> list[ChatMessageRead]:
@@ -95,6 +124,8 @@ async def messages(
     "/interactions/{interaction_id}/messages",
     response_model=ChatMessageRead,
     status_code=status.HTTP_201_CREATED,
+    summary="Добавить сообщение по взаимодействию",
+    description="Добавляет сообщение от текущего пользователя к указанному взаимодействию.",
 )
 async def message(
     interaction_id: uuid.UUID,
@@ -108,7 +139,12 @@ async def message(
     )
 
 
-@router.get("/education/participants", response_model=list[ParticipantRead])
+@router.get(
+    "/education/participants",
+    response_model=list[ParticipantRead],
+    summary="Список участников образовательных активностей",
+    description="Возвращает участников образовательных активностей в доступных пользователю вузах.",
+)
 async def participants(session: SessionDep, scope: ScopeDep) -> list[ParticipantRead]:
     return [
         ParticipantRead.model_validate(x)
@@ -117,7 +153,11 @@ async def participants(session: SessionDep, scope: ScopeDep) -> list[Participant
 
 
 @router.post(
-    "/education/participants", response_model=ParticipantRead, status_code=status.HTTP_201_CREATED
+    "/education/participants",
+    response_model=ParticipantRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Добавить участника образовательной активности",
+    description="Создаёт участника образовательных активностей. Доступно менеджеру.",
 )
 async def participant(
     data: ParticipantCreate,
@@ -130,7 +170,12 @@ async def participant(
     )
 
 
-@router.get("/education/activities", response_model=list[ActivityRead])
+@router.get(
+    "/education/activities",
+    response_model=list[ActivityRead],
+    summary="Список образовательных активностей",
+    description="Возвращает образовательные активности вместе с их участниками.",
+)
 async def activities(session: SessionDep, scope: ScopeDep) -> list[ActivityRead]:
     return [
         ActivityRead(
@@ -147,7 +192,14 @@ async def activities(session: SessionDep, scope: ScopeDep) -> list[ActivityRead]
 
 
 @router.post(
-    "/education/activities", response_model=ActivityRead, status_code=status.HTTP_201_CREATED
+    "/education/activities",
+    response_model=ActivityRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Создать образовательную активность",
+    description=(
+        "Создаёт образовательную активность и связывает её с указанными участниками. "
+        "Доступно менеджеру."
+    ),
 )
 async def activity(
     data: ActivityCreate,
