@@ -36,11 +36,16 @@ export function Modal({
   size = 'md',
 }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape') onCloseRef.current();
     };
     document.addEventListener('keydown', onKey);
     panelRef.current?.focus();
@@ -50,7 +55,10 @@ export function Modal({
       document.removeEventListener('keydown', onKey);
       document.body.style.overflow = previousOverflow;
     };
-  }, [open, onClose]);
+  // `onClose` is often an inline callback from the parent. Re-running this
+  // effect when a controlled field changes would move focus back to the
+  // dialog after every keystroke.
+  }, [open]);
 
   if (!open) return null;
 
