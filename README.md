@@ -98,6 +98,11 @@ ghcr.io/<owner>/<repo>/web    веб-интерфейс
 | `/docs`, `/redoc`, `/openapi.json`, `/health` | API |
 | `/kc/…` | Keycloak |
 
+Keycloak can generate canonical login-page links such as `/resources/…` and
+`/realms/…` without the `/kc` prefix when its public hostname is the main
+application domain. Caddy routes those paths directly to Keycloak, so they do
+not fall through to the SPA and are returned with their correct MIME types.
+
 Отдельный домен под фронтенд не нужен, а браузер обращается только к одному
 origin — у API нет CORS, и в realm Keycloak прописан один web origin.
 
