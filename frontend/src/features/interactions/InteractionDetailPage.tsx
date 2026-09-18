@@ -179,7 +179,7 @@ export function InteractionDetailPage() {
         }
         actions={
           record &&
-          can('manager') && (
+          (can('manager') || !record.responsible_user_id) && (
             <>
               <Button icon="edit" onClick={() => setEditing(true)}>
                 Изменить

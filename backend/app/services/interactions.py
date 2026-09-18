@@ -9,7 +9,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.access import AccessScope
-from app.core.errors import ValidationError
+from app.core.errors import AccessDeniedError, ValidationError
 from app.models.interaction import Interaction
 from app.repositories.interaction import InteractionRepository
 from app.repositories.university import UniversityRepository
@@ -122,6 +122,19 @@ class InteractionService:
 
     async def update(self, interaction_id: uuid.UUID, data: InteractionUpdate) -> Interaction:
         interaction = await self.repo.get_or_fail(interaction_id)
+        if not self.scope.is_privileged and interaction.responsible_user_id is not None:
+            from app.services.audit import log_access_denied
+
+            await log_access_denied(
+                self.session,
+                entity_type=Interaction.__tablename__,
+                entity_id=interaction.id,
+                reason="interaction_has_responsible",
+            )
+            raise AccessDeniedError(
+                "Редактировать назначенную карточку может только руководитель или администратор",
+                details={"interaction_id": str(interaction_id)},
+            )
         patch = data.model_dump(exclude_unset=True)
         if "university_id" in patch:
             await self.universities.get_or_fail(patch["university_id"])

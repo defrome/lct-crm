@@ -9,7 +9,8 @@ import pytest
 from app.core.errors import DuplicateEntityError
 from app.schemas.interaction import InteractionCreate, InteractionUpdate
 from app.schemas.product import ProductCreate, VendorCreate
-from app.schemas.university import UniversityCreate
+from app.schemas.university import AssignmentCreate, UniversityCreate
+from app.services.assignments import AssignmentService
 from app.services.catalogs import ITProductService, UniversityService, VendorService
 from app.services.interactions import InteractionService, compute_license_expiry
 from tests.conftest import auth
@@ -210,6 +211,46 @@ async def test_api_create_loads_related_objects(session, client, manager_user, s
     assert body["university"]["name"] == "МГТУ"
     assert body["it_product"]["name"] == "Astra Linux"
     assert body["it_product"]["vendor"]["name"] == "Астра"
+
+
+async def test_any_user_can_update_an_unassigned_interaction(session, client, kam_user, scope):
+    university = await UniversityService(session, scope).create(UniversityCreate(name="Общая очередь"))
+    interaction = await InteractionService(session, scope).create(
+        InteractionCreate(university_id=university.id)
+    )
+
+    listed = await client.get("/api/v1/interactions", headers=auth(kam_user))
+    assert listed.status_code == 200
+    assert [item["id"] for item in listed.json()["items"]] == [str(interaction.id)]
+
+    updated = await client.patch(
+        f"/api/v1/interactions/{interaction.id}",
+        json={"comment": "Беру в работу"},
+        headers=auth(kam_user),
+    )
+    assert updated.status_code == 200
+    assert updated.json()["comment"] == "Беру в работу"
+
+
+async def test_user_cannot_update_an_interaction_after_responsible_is_assigned(
+    session, client, kam_user, manager_user, scope
+):
+    university = await UniversityService(session, scope).create(UniversityCreate(name="Закреплённый вуз"))
+    await AssignmentService(session, scope).create(
+        university.id,
+        AssignmentCreate(user_id=kam_user.id, assigned_from=dt.date.today()),
+    )
+    interaction = await InteractionService(session, scope).create(
+        InteractionCreate(university_id=university.id, responsible_user_id=manager_user.id)
+    )
+
+    response = await client.patch(
+        f"/api/v1/interactions/{interaction.id}",
+        json={"comment": "Нельзя менять"},
+        headers=auth(kam_user),
+    )
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "ACCESS_DENIED"
 
 
 async def test_patch_of_unrelated_field_keeps_manual_expiry(session, scope):

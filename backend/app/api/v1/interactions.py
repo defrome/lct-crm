@@ -30,7 +30,8 @@ router = APIRouter(prefix="/interactions", tags=["Взаимодействия"]
     summary="Список взаимодействий",
     description=(
         "Карточки «вуз + ИТ-направление + ИТ-продукт».\n\n"
-        "Роль `user` видит только карточки закреплённых за ним вузов. "
+        "Роль `user` видит карточки закреплённых за ним вузов и все карточки без "
+        "назначенного ответственного. "
         "Поля `workflow_version_id` и `current_stage_id` зарезервированы "
         "под workflow-движок (SPEC-02) и пока всегда `null`."
     ),
@@ -115,7 +116,10 @@ async def create_interaction(
     "/{interaction_id}",
     response_model=InteractionRead,
     summary="Изменить взаимодействие",
-    description="Частичное обновление. Доступно ролям `manager` и `admin`.",
+    description=(
+        "Частичное обновление. Карточку без назначенного ответственного может изменить "
+        "любой авторизованный пользователь; назначенную карточку — роли `manager` и `admin`."
+    ),
     responses=CATALOG_ERRORS,
 )
 async def update_interaction(
@@ -123,7 +127,6 @@ async def update_interaction(
     data: InteractionUpdate,
     session: SessionDep,
     scope: ScopeDep,
-    _: CurrentUser = Depends(require_manager),
 ) -> InteractionRead:
     interaction = await InteractionService(session, scope).update(interaction_id, data)
     return InteractionRead.model_validate(interaction)
