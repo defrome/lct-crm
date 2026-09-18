@@ -10,6 +10,7 @@ from __future__ import annotations
 import datetime as dt
 import hashlib
 import io
+import re
 import zipfile
 from dataclasses import dataclass, field
 from typing import Any, Literal
@@ -25,6 +26,10 @@ FileFormat = Literal["xlsx", "xls"]
 # (SPEC §6 step 1: "реальный MIME по сигнатуре файла").
 _ZIP_SIGNATURES = (b"PK\x03\x04", b"PK\x05\x06", b"PK\x07\x08")
 _OLE2_SIGNATURE = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"
+_REPORT_METADATA = re.compile(
+    r"^Отбор:\s*.+?\.\s*Записей:\s*\d+\.\s*Сформирован\s+.+$",
+    re.IGNORECASE,
+)
 
 
 @dataclass(slots=True)
@@ -45,6 +50,16 @@ class ParsedFile:
     file_hash: str
     file_format: FileFormat
     sheet_name: str
+
+
+def _is_report_metadata_row(row: RawRow) -> bool:
+    """Ignore the one-cell filter summary emitted by the report exporter."""
+    values = [value for value in row.cells.values() if value is not None and str(value).strip()]
+    return (
+        len(values) == 1
+        and isinstance(values[0], str)
+        and bool(_REPORT_METADATA.fullmatch(values[0]))
+    )
 
 
 def compute_file_hash(content: bytes) -> str:
@@ -130,7 +145,7 @@ def _parse_xlsx(content: bytes, filename: str) -> tuple[list[str], list[RawRow],
                 for i, header in enumerate(headers)
             }
             row = RawRow(row_number=offset, cells=cells)
-            if not row.is_empty():
+            if not row.is_empty() and not _is_report_metadata_row(row):
                 rows.append(row)
         return headers, rows, sheet.title
     finally:
@@ -173,7 +188,7 @@ def _parse_xls(content: bytes, filename: str) -> tuple[list[str], list[RawRow], 
                 value = None
             cells[header] = _cell_value(value)
         row = RawRow(row_number=row_index + 1, cells=cells)
-        if not row.is_empty():
+        if not row.is_empty() and not _is_report_metadata_row(row):
             rows.append(row)
     return headers, rows, sheet.name
 

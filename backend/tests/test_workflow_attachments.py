@@ -160,9 +160,13 @@ async def test_soft_deleted_attachment_disappears_but_bytes_remain(session, scop
 
     _, total = await service.list_for_interaction(interaction.id)
     assert total == 0
+    assert attachment.storage_key is not None
+    assert await service.storage.get(attachment.storage_key) == ATTACHMENT_SAMPLES["png"]
 
     blob = await session.scalar(
-        sa.text("SELECT count(*) FROM workflow_attachment_blobs WHERE attachment_id = :id"),
+        sa.text(
+            "SELECT count(*) FROM workflow_attachments WHERE id = :id AND storage_key IS NOT NULL"
+        ),
         {"id": attachment.id},
     )
     assert blob == 1, "содержимое остаётся — очистка это вопрос политики хранения"

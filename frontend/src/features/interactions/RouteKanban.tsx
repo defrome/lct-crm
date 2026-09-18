@@ -40,7 +40,7 @@ export function RouteKanban({
   const canDrag = movable && availableByStage.size > 0;
 
   return (
-    <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0">
+    <div className="-mx-4 flex touch-pan-x gap-3 overflow-x-auto overscroll-x-contain px-4 pb-3 [-webkit-overflow-scrolling:touch] sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0">
       {stages.map((stage, index) => {
         const isCurrent = stage.id === currentStageId;
         const isDone = currentIndex >= 0 && index < currentIndex;

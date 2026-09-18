@@ -289,7 +289,7 @@ export function SegmentedControl<T extends string>({
             aria-checked={active}
             onClick={() => onChange(option.value)}
             className={clsx(
-              'relative z-10 inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-s border-0 bg-transparent px-3',
+              'relative z-10 inline-flex h-8 flex-1 items-center justify-center gap-1.5 rounded-s border-0 bg-transparent px-3 whitespace-nowrap',
               'cursor-pointer text-body-s font-medium transition-colors duration-200 ease-productive',
               active ? 'text-white' : 'text-fg',
             )}

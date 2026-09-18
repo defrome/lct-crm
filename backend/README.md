@@ -219,6 +219,9 @@ SQLite это не эмулирует. База создаётся один ра
 | `DB_POOL_SIZE` / `DB_MAX_OVERFLOW` | `10` / `20` | пул соединений |
 | `KEYCLOAK_ISSUER` / `KEYCLOAK_AUDIENCE` / `KEYCLOAK_JWKS_URL` | пусто | обязательны при `AUTH_MODE=keycloak` |
 | `IMPORT_MAX_FILE_SIZE` | `20971520` (20 МБ) | предел размера загружаемого файла |
+| `MINIO_ENDPOINT` | `localhost:9000` | S3-совместимый endpoint MinIO |
+| `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | `minioadmin` / `minioadmin` | учётные данные MinIO |
+| `MINIO_BUCKET` | `crm-files` | бакет для импортов и вложений workflow |
 | `IMPORT_MAX_ROWS` | `100000` | предел числа строк в файле |
 | `IMPORT_FUZZY_THRESHOLD` | `88` | 0–100: насколько близким должно быть название вуза, чтобы его предложили как совпадение |
 | `PAGE_SIZE_DEFAULT` / `PAGE_SIZE_MAX` | `50` / `200` | пагинация |

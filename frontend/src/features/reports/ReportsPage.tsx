@@ -39,7 +39,7 @@ import { formatDate, formatDateLong, licenseState, shortName } from '@/lib/forma
  * the rest are the contract details people ask for once they have the first five.
  */
 const COLUMNS: (ReportColumn & { required?: boolean })[] = [
-  { key: 'university', title: 'Наименование вуза', width: 34, required: true },
+  { key: 'university', title: 'Название вуза', width: 34, required: true },
   { key: 'direction', title: 'ИТ-направление', width: 22 },
   { key: 'product', title: 'ИТ-продукт', width: 26 },
   { key: 'stage', title: 'Статус работы с вузом', width: 34 },

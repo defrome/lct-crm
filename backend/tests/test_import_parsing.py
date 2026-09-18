@@ -61,6 +61,16 @@ def test_parses_headers_and_skips_blank_rows():
     assert parsed.rows[0].cells["Название ВУЗа"] == "Вуз А"
 
 
+def test_skips_generated_report_metadata_row():
+    metadata = "Отбор: без ограничений. Записей: 4. Сформирован 18 сентября 2026 г."
+    content = make_xlsx([catalog_row("Вуз А"), [metadata] + [None] * (len(CATALOG_HEADERS) - 1)])
+
+    parsed = parse_file(content, "report.xlsx")
+
+    assert [row.row_number for row in parsed.rows] == [2]
+    assert parsed.rows[0].cells["Название ВУЗа"] == "Вуз А"
+
+
 def test_duplicate_headers_are_made_unique():
     content = make_xlsx([["a", "b"]], headers=["Колонка", "Колонка"])
     parsed = parse_file(content, "catalog.xlsx")

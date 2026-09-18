@@ -104,8 +104,13 @@ class ReportingService:
             if value is not None:
                 conditions.append(getattr(Interaction, field) == value)
         conditions.extend(period_conditions(filters.period_from, filters.period_to))
-        if not self.scope.is_privileged:
-            conditions.append(Interaction.university_id.in_(visible_university_ids(self.scope)))
+        if not self.scope.is_privileged and self.scope.visibility_mode != "all":
+            conditions.append(
+                sa.or_(
+                    Interaction.responsible_user_id.is_(None),
+                    Interaction.university_id.in_(visible_university_ids(self.scope)),
+                )
+            )
         return stmt.where(*conditions)
 
     async def rows(

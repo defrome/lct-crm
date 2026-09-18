@@ -31,6 +31,7 @@ class ImportJob(DomainBase):
     filename: Mapped[str] = mapped_column(sa.Text, nullable=False)
     # sha256 of the raw bytes — used to warn about a repeated upload (SPEC §6.4).
     file_hash: Mapped[str] = mapped_column(sa.Text, nullable=False)
+    storage_key: Mapped[str | None] = mapped_column(sa.Text, default=None)
     target: Mapped[ImportTarget] = mapped_column(
         _pg_enum(ImportTarget, IMPORT_TARGET_ENUM), nullable=False
     )

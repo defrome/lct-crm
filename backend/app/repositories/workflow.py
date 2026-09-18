@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import uuid
-from typing import ClassVar
+from typing import Any, ClassVar
 
 import sqlalchemy as sa
+from sqlalchemy.sql import Select
 
 from app.models.enums import WorkflowVersionStatus
 from app.models.workflow import (
@@ -17,7 +18,7 @@ from app.models.workflow import (
     WorkflowTransition,
     WorkflowVersion,
 )
-from app.repositories.base import BaseRepository
+from app.repositories.base import BaseRepository, visible_university_ids
 
 
 class WorkflowRepository(BaseRepository[Workflow]):
@@ -242,6 +243,24 @@ class WorkflowAttachmentRepository(BaseRepository[WorkflowAttachment]):
     sortable_fields: ClassVar[tuple[str, ...]] = ("filename", "created_at", "size_bytes")
     default_order: ClassVar[tuple[str, ...]] = ("-created_at",)
     university_scope_column: ClassVar[str | None] = "university_id"
+
+    def _access_filter(self, stmt: Select[Any]) -> Select[Any]:
+        """Keep attachment access aligned with its interaction card."""
+        if self.scope.is_privileged or self.scope.visibility_mode == "all":
+            return stmt
+        from app.models.interaction import Interaction
+
+        interaction_visible = sa.exists(
+            sa.select(Interaction.id).where(
+                Interaction.id == WorkflowAttachment.interaction_id,
+                Interaction.deleted_at.is_(None),
+                sa.or_(
+                    Interaction.responsible_user_id.is_(None),
+                    Interaction.university_id.in_(visible_university_ids(self.scope)),
+                ),
+            )
+        )
+        return stmt.where(interaction_visible)
 
     async def store_blob(self, attachment_id: uuid.UUID, data: bytes) -> None:
         self.session.add(WorkflowAttachmentBlob(attachment_id=attachment_id, data=data))

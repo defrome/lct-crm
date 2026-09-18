@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useRef, useState } from 'react';
+import { useId, useState } from 'react';
 
 import { attachmentsApi, interactionsApi } from '@/api/endpoints';
 import { ATTACHMENT_FORMATS, type AttachmentRead, type StageRead } from '@/api/types';
@@ -124,7 +124,7 @@ function AttachmentRow({
   });
 
   return (
-    <li className="flex items-center gap-3 rounded-l px-2 py-2 transition-colors hover:bg-surface-3">
+    <li className="flex min-w-0 items-center gap-3 rounded-l px-2 py-2 transition-colors hover:bg-surface-3">
       <span className="grid size-8 shrink-0 place-items-center rounded-m bg-surface-3 text-fg-muted">
         <Icon name="file" className="size-4" />
       </span>
@@ -137,7 +137,7 @@ function AttachmentRow({
           <span>{formatRelative(attachment.created_at)}</span>
         </p>
         {attachment.comment && (
-          <p className="mt-0.5 text-desc text-fg-soft">{attachment.comment}</p>
+          <p className="mt-0.5 break-words text-desc text-fg-soft">{attachment.comment}</p>
         )}
       </div>
 
@@ -187,7 +187,7 @@ function UploadModal({
 }) {
   const toast = useToast();
   const client = useQueryClient();
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputId = useId();
   const [file, setFile] = useState<File | null>(null);
   const [comment, setComment] = useState('');
 
@@ -229,9 +229,8 @@ function UploadModal({
         </>
       }
     >
-      <button
-        type="button"
-        onClick={() => inputRef.current?.click()}
+      <label
+        htmlFor={inputId}
         className="flex w-full flex-col items-center gap-2 rounded-l border border-dashed border-line-soft bg-surface-3/50 px-4 py-8 text-center transition-colors hover:border-accent hover:bg-accent-container/40"
       >
         <Icon name="upload" className="size-6 text-fg-muted" />
@@ -248,9 +247,9 @@ function UploadModal({
             </span>
           </>
         )}
-      </button>
+      </label>
       <input
-        ref={inputRef}
+        id={inputId}
         type="file"
         accept={ACCEPT}
         className="sr-only"
