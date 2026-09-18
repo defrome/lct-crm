@@ -96,14 +96,20 @@ def _role_from_claims(claims: dict[str, Any]) -> UserRole:
 async def _decode_keycloak_token(token: str) -> dict[str, Any]:
     if not settings.keycloak_jwks_url:
         raise AccessDeniedError("Проверка токена невозможна: не настроен KEYCLOAK_JWKS_URL")
+    # Compose keeps the optional setting present as an empty environment
+    # value. Treat blank strings as disabled; otherwise python-jose enables
+    # audience validation and rejects tokens without a configured audience.
+    audience = settings.keycloak_audience.strip() if settings.keycloak_audience else None
+    if not audience:
+        audience = None
     try:
         jwks = await _jwks_cache.get(settings.keycloak_jwks_url)
         claims: dict[str, Any] = jwt.decode(
             token,
             jwks,
-            audience=settings.keycloak_audience,
+            audience=audience,
             issuer=settings.keycloak_issuer,
-            options={"verify_aud": settings.keycloak_audience is not None},
+            options={"verify_aud": audience is not None},
         )
     except (JWTError, httpx.HTTPError) as exc:
         logger.warning("token verification failed: %s", exc)
@@ -112,7 +118,12 @@ async def _decode_keycloak_token(token: str) -> dict[str, Any]:
 
 
 async def _sync_user_projection(
-    session: AsyncSession, *, keycloak_id: str, full_name: str, email: str | None, role: UserRole
+    session: AsyncSession,
+    *,
+    keycloak_id: str,
+    full_name: str,
+    email: str | None,
+    role: UserRole,
 ) -> User:
     """Keep the local `users` row in step with the token (SPEC §4.2).
 
