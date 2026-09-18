@@ -106,7 +106,12 @@ async def deliver(
     return {"processed": await CommunicationService(session, scope).deliver_pending()}
 
 
-@router.get("/notifications", response_model=list[NotificationDeliveryRead])
+@router.get(
+    "/notifications",
+    response_model=list[NotificationDeliveryRead],
+    summary="Notification delivery list",
+    description="Returns notification deliveries available to the current user.",
+)
 async def notification_deliveries(
     session: SessionDep, scope: ScopeDep
 ) -> list[NotificationDeliveryRead]:
