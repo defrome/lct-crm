@@ -49,6 +49,9 @@ export const qk = {
   history: (id: string) => ['interactions', id, 'history'] as const,
   attachments: (id: string, stageId?: string) =>
     ['interactions', id, 'attachments', stageId ?? 'all'] as const,
+  messages: (id: string) => ['interactions', id, 'messages'] as const,
+  notifications: ['notifications'] as const,
+  notificationRules: ['notification-rules'] as const,
 
   workflows: (params?: unknown) => ['workflows', params ?? {}] as const,
   workflow: (id: string) => ['workflows', 'one', id] as const,

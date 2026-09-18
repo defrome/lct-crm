@@ -16,6 +16,7 @@ from app.schemas.communications import (
     ActivityRead,
     ChatMessageCreate,
     ChatMessageRead,
+    NotificationDeliveryRead,
     NotificationRuleCreate,
     NotificationRuleRead,
     ParticipantCreate,
@@ -103,6 +104,16 @@ async def deliver(
     session: SessionDep, scope: ScopeDep, _: CurrentUser = Depends(require_manager)
 ) -> dict[str, int]:
     return {"processed": await CommunicationService(session, scope).deliver_pending()}
+
+
+@router.get("/notifications", response_model=list[NotificationDeliveryRead])
+async def notification_deliveries(
+    session: SessionDep, scope: ScopeDep
+) -> list[NotificationDeliveryRead]:
+    return [
+        NotificationDeliveryRead.model_validate(item)
+        for item in await CommunicationService(session, scope).deliveries()
+    ]
 
 
 @router.get(

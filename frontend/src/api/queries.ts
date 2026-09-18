@@ -9,6 +9,7 @@ import {
   directionsApi,
   importsApi,
   interactionsApi,
+  notificationsApi,
   productsApi,
   universitiesApi,
   usersApi,
@@ -121,6 +122,29 @@ export function useAttachments(id: UUID | undefined) {
     queryKey: qk.attachments(id!),
     queryFn: () => interactionsApi.attachments(id!, { size: 200 }),
     enabled: Boolean(id),
+  });
+}
+
+export function useMessages(id: UUID | undefined) {
+  return useQuery({
+    queryKey: qk.messages(id!),
+    queryFn: () => interactionsApi.messages(id!),
+    enabled: Boolean(id),
+  });
+}
+
+export function useNotifications() {
+  return useQuery({
+    queryKey: qk.notifications,
+    queryFn: notificationsApi.list,
+    refetchInterval: 60_000,
+  });
+}
+
+export function useNotificationRules() {
+  return useQuery({
+    queryKey: qk.notificationRules,
+    queryFn: notificationsApi.rules,
   });
 }
 

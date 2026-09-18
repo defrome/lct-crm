@@ -28,7 +28,7 @@ from app.services.text import clean_text
 
 def _visible(
     scope: AccessScope,
-    model: type[EducationParticipant] | type[EducationActivity],
+    model: type[EducationParticipant] | type[EducationActivity] | type[NotificationDelivery],
 ) -> Any:
     from app.repositories.base import visible_university_ids
 
@@ -198,6 +198,22 @@ class CommunicationService:
                 row.status, row.error_message = "failed", "Внешний канал отключён feature flag"
         await self.session.commit()
         return len(rows)
+
+    async def deliveries(self, limit: int = 20) -> list[NotificationDelivery]:
+        """Recent delivery attempts for the notification center."""
+        return list(
+            (
+                await self.session.scalars(
+                    sa.select(NotificationDelivery)
+                    .where(
+                        NotificationDelivery.deleted_at.is_(None),
+                        _visible(self.scope, NotificationDelivery),
+                    )
+                    .order_by(NotificationDelivery.created_at.desc())
+                    .limit(limit)
+                )
+            ).all()
+        )
 
     async def messages(self, interaction_id: uuid.UUID) -> list[ChatMessage]:
         await self.interactions.get_or_fail(interaction_id)

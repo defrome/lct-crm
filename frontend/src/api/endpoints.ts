@@ -13,6 +13,8 @@ import type {
   CurrentUser,
   DirectionCreate,
   DirectionRead,
+  ChatMessageCreate,
+  ChatMessageRead,
   ImportCommitResult,
   ImportJobCreated,
   ImportJobRead,
@@ -24,6 +26,9 @@ import type {
   InteractionRead,
   InteractionUpdate,
   MappingRequest,
+  NotificationDeliveryRead,
+  NotificationRuleCreate,
+  NotificationRuleRead,
   Page,
   PageQuery,
   PresetCreate,
@@ -146,6 +151,9 @@ export const interactionsApi = {
   transition: (id: UUID, body: TransitionRequest) =>
     api.post<RouteView>(`/interactions/${id}/transitions`, body),
   history: (id: UUID) => api.get<StageHistoryRead[]>(`/interactions/${id}/history`),
+  messages: (id: UUID) => api.get<ChatMessageRead[]>(`/interactions/${id}/messages`),
+  sendMessage: (id: UUID, body: ChatMessageCreate) =>
+    api.post<ChatMessageRead>(`/interactions/${id}/messages`, body),
 
   attachments: (id: UUID, params?: PageQuery & { stage_id?: UUID }) =>
     api.get<Page<AttachmentRead>>(`/interactions/${id}/attachments`, q(params)),
@@ -155,6 +163,14 @@ export const interactionsApi = {
     if (comment) form.append('comment', comment);
     return api.upload<AttachmentRead>(`/interactions/${id}/stages/${stageId}/attachments`, form);
   },
+};
+
+export const notificationsApi = {
+  list: () => api.get<NotificationDeliveryRead[]>('/notifications'),
+  deliver: () => api.post<{ processed: number }>('/notifications/deliver'),
+  rules: () => api.get<NotificationRuleRead[]>('/notification-rules'),
+  createRule: (body: NotificationRuleCreate) =>
+    api.post<NotificationRuleRead>('/notification-rules', body),
 };
 
 export const attachmentsApi = {

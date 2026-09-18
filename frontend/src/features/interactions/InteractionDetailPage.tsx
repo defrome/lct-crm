@@ -21,6 +21,7 @@ import { InteractionFormModal } from './InteractionFormModal';
 import { LicenseDate } from './parts';
 import { RouteKanban } from './RouteKanban';
 import { TransitionModal } from './TransitionModal';
+import { ChatPanel } from './ChatPanel';
 
 type RouteViewMode = 'line' | 'kanban';
 
@@ -255,6 +256,7 @@ export function InteractionDetailPage() {
           </section>
 
           <HistoryPanel route={route.data} />
+          <ChatPanel interactionId={id!} />
         </div>
 
         <div className="flex flex-col gap-4">

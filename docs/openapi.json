@@ -7131,7 +7131,8 @@
         "tags": [
           "Коммуникации и обучение"
         ],
-        "summary": "Rules",
+        "summary": "Список правил уведомлений",
+        "description": "Правила автоматических уведомлений для переходов workflow в доступных пользователю вузах.",
         "operationId": "rules_api_v1_notification_rules_get",
         "responses": {
           "200": {
@@ -7154,7 +7155,8 @@
         "tags": [
           "Коммуникации и обучение"
         ],
-        "summary": "Create Rule",
+        "summary": "Создать правило уведомлений",
+        "description": "Создаёт правило автоматического уведомления для перехода workflow. Доступно менеджеру.",
         "operationId": "create_rule_api_v1_notification_rules_post",
         "requestBody": {
           "content": {
@@ -7195,7 +7197,8 @@
         "tags": [
           "Коммуникации и обучение"
         ],
-        "summary": "Run Stalled",
+        "summary": "Проверить просроченные переходы",
+        "description": "Создаёт ожидающие уведомления для карточек с просроченными переходами workflow. Доступно менеджеру.",
         "operationId": "run_stalled_api_v1_notifications_run_stalled_post",
         "responses": {
           "200": {
@@ -7220,7 +7223,8 @@
         "tags": [
           "Коммуникации и обучение"
         ],
-        "summary": "Deliver",
+        "summary": "Отправить ожидающие уведомления",
+        "description": "Обрабатывает очередь ожидающих уведомлений. Доступно менеджеру.",
         "operationId": "deliver_api_v1_notifications_deliver_post",
         "responses": {
           "200": {
@@ -7240,12 +7244,38 @@
         }
       }
     },
+    "/api/v1/notifications": {
+      "get": {
+        "tags": [
+          "Коммуникации и обучение"
+        ],
+        "summary": "Notification Deliveries",
+        "operationId": "notification_deliveries_api_v1_notifications_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/NotificationDeliveryRead"
+                  },
+                  "type": "array",
+                  "title": "Response Notification Deliveries Api V1 Notifications Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/interactions/{interaction_id}/messages": {
       "get": {
         "tags": [
           "Коммуникации и обучение"
         ],
-        "summary": "Messages",
+        "summary": "Сообщения по взаимодействию",
+        "description": "Возвращает историю сообщений для указанного взаимодействия.",
         "operationId": "messages_api_v1_interactions__interaction_id__messages_get",
         "parameters": [
           {
@@ -7290,7 +7320,8 @@
         "tags": [
           "Коммуникации и обучение"
         ],
-        "summary": "Message",
+        "summary": "Добавить сообщение по взаимодействию",
+        "description": "Добавляет сообщение от текущего пользователя к указанному взаимодействию.",
         "operationId": "message_api_v1_interactions__interaction_id__messages_post",
         "parameters": [
           {
@@ -7343,7 +7374,8 @@
         "tags": [
           "Коммуникации и обучение"
         ],
-        "summary": "Participants",
+        "summary": "Список участников образовательных активностей",
+        "description": "Возвращает участников образовательных активностей в доступных пользователю вузах.",
         "operationId": "participants_api_v1_education_participants_get",
         "responses": {
           "200": {
@@ -7366,7 +7398,8 @@
         "tags": [
           "Коммуникации и обучение"
         ],
-        "summary": "Participant",
+        "summary": "Добавить участника образовательной активности",
+        "description": "Создаёт участника образовательных активностей. Доступно менеджеру.",
         "operationId": "participant_api_v1_education_participants_post",
         "requestBody": {
           "content": {
@@ -7407,7 +7440,8 @@
         "tags": [
           "Коммуникации и обучение"
         ],
-        "summary": "Activities",
+        "summary": "Список образовательных активностей",
+        "description": "Возвращает образовательные активности вместе с их участниками.",
         "operationId": "activities_api_v1_education_activities_get",
         "responses": {
           "200": {
@@ -7430,7 +7464,8 @@
         "tags": [
           "Коммуникации и обучение"
         ],
-        "summary": "Activity",
+        "summary": "Создать образовательную активность",
+        "description": "Создаёт образовательную активность и связывает её с указанными участниками. Доступно менеджеру.",
         "operationId": "activity_api_v1_education_activities_post",
         "requestBody": {
           "content": {
@@ -9592,6 +9627,85 @@
         },
         "type": "object",
         "title": "MigrationPreviewRequest"
+      },
+      "NotificationDeliveryRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "interaction_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Interaction Id"
+          },
+          "recipient_user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipient User Id"
+          },
+          "channel": {
+            "type": "string",
+            "title": "Channel"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "attempts": {
+            "type": "integer",
+            "title": "Attempts"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "sent_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sent At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "interaction_id",
+          "recipient_user_id",
+          "channel",
+          "status",
+          "attempts",
+          "error_message",
+          "created_at",
+          "sent_at"
+        ],
+        "title": "NotificationDeliveryRead"
       },
       "NotificationRuleCreate": {
         "properties": {

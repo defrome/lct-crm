@@ -240,6 +240,57 @@ export interface InteractionQuery extends PageQuery {
   responsible_user_id?: UUID;
 }
 
+// --- РљРѕРјРјСѓРЅРёРєР°С†РёРё ---------------------------------------------------------
+
+export type NotificationChannel = 'email' | 'telegram' | 'max';
+export type NotificationStatus = 'queued' | 'sent' | 'failed';
+export type NotificationRecipient = 'responsible' | 'manager' | 'role' | 'user';
+
+export interface ChatMessageRead {
+  id: UUID;
+  interaction_id: UUID;
+  author_id: UUID;
+  author: UserShort;
+  body: string;
+  created_at: DateTime;
+}
+
+export interface ChatMessageCreate {
+  body: string;
+}
+
+export interface NotificationDeliveryRead {
+  id: UUID;
+  interaction_id: UUID;
+  recipient_user_id: UUID | null;
+  channel: NotificationChannel;
+  status: NotificationStatus;
+  attempts: number;
+  error_message: string | null;
+  created_at: DateTime;
+  sent_at: DateTime | null;
+}
+
+export interface NotificationRuleRead {
+  id: UUID;
+  workflow_transition_id: UUID | null;
+  stale_after_days: number | null;
+  recipient_kind: NotificationRecipient;
+  recipient_role: UserRole | null;
+  recipient_user_id: UUID | null;
+  channel: NotificationChannel;
+  is_enabled: boolean;
+}
+
+export interface NotificationRuleCreate {
+  workflow_transition_id?: UUID | null;
+  stale_after_days?: number | null;
+  recipient_kind: NotificationRecipient;
+  recipient_role?: UserRole | null;
+  recipient_user_id?: UUID | null;
+  channel: NotificationChannel;
+}
+
 // --- Workflow ---------------------------------------------------------------
 
 export type WorkflowVersionStatus = 'draft' | 'published' | 'archived';

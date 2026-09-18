@@ -11,6 +11,7 @@ import { IconButton, chipClass } from '@/components/ui/Button';
 import { Icon, type IconName } from '@/components/ui/Icon';
 import { useDismiss, useMediaQuery } from '@/hooks';
 import { ROLE_LABELS } from '@/lib/format';
+import { NotificationCenter } from './NotificationCenter';
 
 interface NavItem {
   to: string;
@@ -101,6 +102,7 @@ export function AppShell() {
             </nav>
             <span className="flex-1" />
             <ThemeToggle />
+            <NotificationCenter />
             <UserMenu />
           </div>
 
