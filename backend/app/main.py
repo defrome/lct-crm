@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ipaddress
 import logging
 import time
 import uuid
@@ -26,6 +27,41 @@ from app.core.logging import configure_logging
 from app.services.cache import get_response_cache
 
 logger = logging.getLogger(__name__)
+
+
+def _client_ip(request: Request) -> str | None:
+    """Return the originating client IP when the request came via our proxies.
+
+    In production the API sees nginx (behind Caddy) as ``request.client``.
+    Only trust forwarded headers from a private/local peer so a direct public
+    request cannot spoof its audit address.
+    """
+    peer = request.client.host if request.client else None
+    if not peer:
+        return None
+
+    try:
+        peer_address = ipaddress.ip_address(peer)
+    except ValueError:
+        return peer
+
+    if not (peer_address.is_private or peer_address.is_loopback or peer_address.is_link_local):
+        return peer
+
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if not forwarded_for:
+        return peer
+
+    # Proxies append addresses to the right; the leftmost valid address is the
+    # original client supplied by Caddy.
+    for value in forwarded_for.split(","):
+        candidate = value.strip()
+        try:
+            return str(ipaddress.ip_address(candidate))
+        except ValueError:
+            continue
+    return peer
+
 
 HTTP_REQUESTS_TOTAL = Counter(
     "crm_http_requests_total",
@@ -169,7 +205,7 @@ async def request_context_middleware(
         request_id = uuid.uuid4()
 
     ctx = AuditContext(
-        ip_address=request.client.host if request.client else None,
+        ip_address=_client_ip(request),
         user_agent=request.headers.get("User-Agent"),
         request_id=request_id,
     )

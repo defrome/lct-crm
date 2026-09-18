@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import sqlalchemy as sa
+from starlette.requests import Request
 
 from app.core.access import AccessScope
 from app.core.audit import AuditContext, audit_context, hash_pd
+from app.main import _client_ip
 from app.models.enums import AuditAction
 from app.schemas.university import ContactCreate, ContactUpdate, UniversityCreate, UniversityUpdate
 from app.services.audit import search_audit_log
@@ -157,3 +159,35 @@ async def test_audit_api_filters(session, client, admin_user, scope):
 async def test_request_id_travels_end_to_end(session, client, admin_user):
     response = await client.get("/api/v1/universities", headers=auth(admin_user))
     assert response.headers["X-Request-ID"]
+
+
+def test_client_ip_uses_forwarded_for_from_private_proxy():
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/",
+            "headers": [(b"x-forwarded-for", b"198.51.100.42, 172.20.0.8")],
+            "client": ("172.20.0.9", 1234),
+            "server": ("api", 8000),
+            "scheme": "http",
+        }
+    )
+
+    assert _client_ip(request) == "198.51.100.42"
+
+
+def test_client_ip_ignores_forwarded_for_from_public_peer():
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/",
+            "headers": [(b"x-forwarded-for", b"198.51.100.42")],
+            "client": ("8.8.8.8", 1234),
+            "server": ("api", 8000),
+            "scheme": "http",
+        }
+    )
+
+    assert _client_ip(request) == "8.8.8.8"
