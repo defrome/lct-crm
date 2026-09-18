@@ -45,11 +45,12 @@ sudo usermod -aG docker DEPLOY_USER
 ```
 
 Деплой также поднимает Caddy как reverse proxy. Caddy автоматически получает и
-обновляет сертификаты Let's Encrypt для `DOMAIN` (API), `KEYCLOAK_DOMAIN`
-(Keycloak) и `GRAFANA_DOMAIN` (Grafana), а данные ACME сохраняются в Docker volumes. Перед первым деплоем
+обновляет сертификаты Let's Encrypt для `DOMAIN` (приложение и Keycloak через
+`/kc`), `KEYCLOAK_DOMAIN` (дополнительный адрес Keycloak) и `GRAFANA_DOMAIN`
+(Grafana), а данные ACME сохраняются в Docker volumes. Перед первым деплоем
 создайте DNS-записи всех трёх доменов на IP сервера и откройте входящие TCP-порты
 `80` и `443` (UDP `443` — опционально для HTTP/3). Заполните эти переменные в
-`.env`; `KEYCLOAK_ISSUER` должен использовать HTTPS-адрес Keycloak.
+`.env`; `KEYCLOAK_ISSUER` должен использовать канонический HTTPS-адрес `DOMAIN/kc`.
 
 В настройках репозитория GitHub создайте Environment `test` и добавьте secrets:
 

@@ -5,17 +5,8 @@
 {$DOMAIN} {
 	encode gzip
 
-	# Keycloak uses URLs relative to its configured public hostname.  When that
-	# hostname is the application domain, its login page refers to these paths
-	# without the /kc prefix.  Send them straight to Keycloak instead of letting
-	# nginx's SPA fallback return index.html with a text/html MIME type.
-	@keycloak_root path /realms/* /resources/* /js/* /robots.txt
-	handle @keycloak_root {
-		reverse_proxy keycloak:8080
-	}
-
-	# All other traffic, including /kc/*, goes through nginx.  It strips /kc/
-	# before proxying to Keycloak and serves the SPA/API routes.
+	# nginx strips /kc/ before proxying to Keycloak and serves the SPA/API routes.
+	# KC_HOSTNAME includes this path, so redirects and cookies stay same-origin.
 	handle {
 		reverse_proxy web:80
 	}

@@ -84,8 +84,10 @@ ghcr.io/<owner>/<repo>/web    веб-интерфейс
 ```
 
 `docker-compose.deploy.yml` разворачивает их за Caddy, который терминирует TLS.
-Доменов по-прежнему три: `DOMAIN` — приложение целиком, `KEYCLOAK_DOMAIN` и
-`GRAFANA_DOMAIN` — как раньше. Переменные сервера — в `.env.server.example`.
+Для TLS по-прежнему можно задать три DNS-имени: `DOMAIN`, `KEYCLOAK_DOMAIN` и
+`GRAFANA_DOMAIN`. Пользовательский вход идёт через `DOMAIN/kc`; `KEYCLOAK_DOMAIN`
+остаётся дополнительным адресом Keycloak, но не используется как cookie-origin.
+Переменные сервера — в `.env.server.example`.
 
 На `DOMAIN` Caddy отдаёт контейнер веб-интерфейса, а nginx внутри него разводит
 запросы дальше:
@@ -98,10 +100,9 @@ ghcr.io/<owner>/<repo>/web    веб-интерфейс
 | `/docs`, `/redoc`, `/openapi.json`, `/health` | API |
 | `/kc/…` | Keycloak |
 
-Keycloak can generate canonical login-page links such as `/resources/…` and
-`/realms/…` without the `/kc` prefix when its public hostname is the main
-application domain. Caddy routes those paths directly to Keycloak, so they do
-not fall through to the SPA and are returned with their correct MIME types.
+Keycloak's canonical public URL is `https://DOMAIN/kc`. Its redirects, login
+forms and session cookies stay on the same origin as the application; nginx
+removes the `/kc` prefix only on the internal proxy hop.
 
 Отдельный домен под фронтенд не нужен, а браузер обращается только к одному
 origin — у API нет CORS, и в realm Keycloak прописан один web origin.

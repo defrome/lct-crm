@@ -43,7 +43,8 @@ Keycloak до выполнения следующих шагов.
    не включаемый в Git: PostgreSQL, MinIO, Keycloak admin, Grafana и токены
    интеграций.
 3. Настроить HTTPS на reverse proxy, задать `DOMAIN`, `KEYCLOAK_DOMAIN` и
-   `GRAFANA_DOMAIN`; API должен проверять issuer production realm.
+   `GRAFANA_DOMAIN`; пользовательский Keycloak URL — `https://DOMAIN/kc`, и
+   API должен проверять issuer production realm на этом адресе.
 4. Отключить общий исходящий интернет. Разрешить исходящие соединения только
    после получения списка IP/CIDR, портов и протоколов LMS/CMS. Пока список не
    передан, `INTEGRATIONS_MODE=fixture`.

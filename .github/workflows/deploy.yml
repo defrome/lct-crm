@@ -247,14 +247,21 @@ jobs:
           export API_IMAGE="$api_image" WEB_IMAGE="$web_image" IMAGE_TAG="$image_tag"
           docker compose -f docker-compose.deploy.yml pull api web
 
-          # Do not recreate stateful services during an API release. Caddy is
-          # handled below: its configuration and domain variables can change
-          # between releases, and --no-recreate would leave it with stale (or
-          # missing) environment variables.
-          if ! docker compose -f docker-compose.deploy.yml up -d --no-build --no-recreate db keycloak minio redis; then
+          # Do not recreate stateful data services during an API release. Caddy
+          # and Keycloak are handled separately: their public URL/environment
+          # can change between releases, and --no-recreate would leave stale
+          # hostname/cookie settings in a running container.
+          if ! docker compose -f docker-compose.deploy.yml up -d --no-build --no-recreate db minio redis; then
             echo "compose startup failed; recent container logs follow"
             docker compose -f docker-compose.deploy.yml ps || true
-            docker compose -f docker-compose.deploy.yml logs --tail=100 db keycloak minio redis api web caddy || true
+            docker compose -f docker-compose.deploy.yml logs --tail=100 db minio redis || true
+            exit 1
+          fi
+
+          if ! docker compose -f docker-compose.deploy.yml up -d --no-build --force-recreate keycloak; then
+            echo "Keycloak startup failed; recent container logs follow"
+            docker compose -f docker-compose.deploy.yml ps || true
+            docker compose -f docker-compose.deploy.yml logs --tail=100 keycloak || true
             exit 1
           fi
 

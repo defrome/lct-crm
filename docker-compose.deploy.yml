@@ -22,13 +22,10 @@ services:
     environment:
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD is required}
-      # Полный URL, а не просто хост. Веб-интерфейс ходит в Keycloak через
-      # /kc/ на основном домене, и при KC_PROXY_HEADERS=xforwarded Keycloak
-      # собирал бы issuer из пришедшего заголовка Host — токен получал бы
-      # `iss` с адресом приложения вместо KEYCLOAK_ISSUER, и API отвергал бы
-      # его с «Токен доступа недействителен». Полный URL закрепляет issuer
-      # независимо от того, каким путём пришёл запрос.
-      KC_HOSTNAME: https://${KEYCLOAK_DOMAIN:?KEYCLOAK_DOMAIN is required}
+      # Browser authentication is exposed through /kc/ on the application
+      # origin. Keeping Keycloak's canonical URL on that exact origin prevents
+      # session cookies from being split across DOMAIN and KEYCLOAK_DOMAIN.
+      KC_HOSTNAME: https://${DOMAIN:?DOMAIN is required}/kc
       KC_PROXY_HEADERS: xforwarded
       KC_HTTP_ENABLED: "true"
     expose:
@@ -110,12 +107,9 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-crm}
       POSTGRES_DB: ${POSTGRES_DB:-crm}
       SEED_ON_START: ${SEED_ON_START:-false}
-      # Выводится из KEYCLOAK_DOMAIN, а не читается из .env: это ровно тот
-      # же адрес, который Keycloak получает в KC_HOSTNAME, поэтому issuer
-      # в токене и issuer, который проверяет API, физически не могут
-      # разъехаться. Раньше они задавались независимо, и любое расхождение
-      # давало «Invalid issuer» без единой подсказки, где именно.
-      KEYCLOAK_ISSUER: https://${KEYCLOAK_DOMAIN:?KEYCLOAK_DOMAIN is required}/realms/crm
+      # Derived from the same public URL as KC_HOSTNAME so token issuer and API
+      # validation target cannot drift apart.
+      KEYCLOAK_ISSUER: https://${DOMAIN:?DOMAIN is required}/kc/realms/crm
       KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-}
       KEYCLOAK_JWKS_URL: http://keycloak:8080/realms/crm/protocol/openid-connect/certs
       OBJECT_STORAGE_BACKEND: minio
