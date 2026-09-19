@@ -18,6 +18,16 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
+    # Alembic updates this row after ``upgrade`` returns.  The revision ID is
+    # 33 characters long, while Alembic creates the column as VARCHAR(32).
+    # Widen it before Alembic tries to record this revision.
+    op.alter_column(
+        "alembic_version",
+        "version_num",
+        existing_type=sa.String(length=32),
+        type_=sa.String(length=64),
+        existing_nullable=False,
+    )
     op.execute(
         "ALTER TABLE university_assignments DROP CONSTRAINT university_assignments_no_overlap"
     )
@@ -32,6 +42,8 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    # Do not narrow ``alembic_version.version_num`` here.  Alembic still holds
+    # this 33-character revision until after this function returns.
     op.execute(
         "ALTER TABLE university_assignments DROP CONSTRAINT university_assignments_no_overlap"
     )
