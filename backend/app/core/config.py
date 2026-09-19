@@ -105,6 +105,7 @@ class Settings(BaseSettings):
     smtp_password: str | None = None
     smtp_from: str | None = None
     smtp_use_tls: bool = True
+    smtp_use_ssl: bool = False
     telegram_bot_token: str | None = None
     telegram_chat_id: str | None = None
 
@@ -156,6 +157,8 @@ class Settings(BaseSettings):
             raise ValueError("NOTIFICATIONS_POLL_SECONDS must be at least 10")
         if self.smtp_port < 1 or self.smtp_port > 65535:
             raise ValueError("SMTP_PORT must be between 1 and 65535")
+        if self.smtp_use_tls and self.smtp_use_ssl:
+            raise ValueError("SMTP_USE_TLS and SMTP_USE_SSL cannot both be enabled")
         return self
 
 

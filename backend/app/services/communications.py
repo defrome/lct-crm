@@ -6,6 +6,7 @@ import asyncio
 import datetime as dt
 import email.message
 import smtplib
+import ssl
 import uuid
 from typing import Any, cast
 
@@ -15,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.access import AccessScope
 from app.core.config import settings
-from app.core.errors import DuplicateEntityError, ValidationError
+from app.core.errors import DuplicateEntityError, NotFoundError, ValidationError
 from app.models.communications import (
     ChatMessage,
     EducationActivity,
@@ -40,13 +41,15 @@ def _send_email(
     recipient: str,
     body: str,
     use_tls: bool,
+    use_ssl: bool,
 ) -> None:
     message = email.message.EmailMessage()
     message["From"], message["To"], message["Subject"] = sender, recipient, "CRM уведомление"
     message.set_content(body)
-    with smtplib.SMTP(host, port, timeout=15) as smtp:
+    smtp_class: type[smtplib.SMTP] = smtplib.SMTP_SSL if use_ssl else smtplib.SMTP
+    with smtp_class(host, port, timeout=15) as smtp:
         if use_tls:
-            smtp.starttls()
+            smtp.starttls(context=ssl.create_default_context())
         if username:
             smtp.login(username, password or "")
         smtp.send_message(message)
@@ -131,6 +134,21 @@ class CommunicationService:
             await self.session.flush()
             await self.session.commit()
         return rule
+
+    async def delete_rule(self, rule_id: uuid.UUID) -> None:
+        rule = await self.session.scalar(
+            sa.select(NotificationRule).where(
+                NotificationRule.id == rule_id,
+                NotificationRule.deleted_at.is_(None),
+            )
+        )
+        if rule is None:
+            raise NotFoundError(
+                "Правило уведомлений не найдено",
+                details={"entity_type": NotificationRule.__tablename__, "id": str(rule_id)},
+            )
+        rule.deleted_at = dt.datetime.now(dt.UTC)
+        await self.session.commit()
 
     async def enqueue_transition(self, interaction: Interaction, transition_id: uuid.UUID) -> None:
         if not settings.feature_notifications_enabled:
@@ -287,6 +305,7 @@ class CommunicationService:
                     recipient_email,
                     message,
                     settings.smtp_use_tls,
+                    settings.smtp_use_ssl,
                 )
             except Exception as exc:  # pragma: no cover - external SMTP failure
                 return False, f"Ошибка SMTP: {exc}"

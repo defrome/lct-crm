@@ -94,6 +94,22 @@ services:
       retries: 20
     restart: unless-stopped
 
+  # Development-only SMTP sink. Messages never leave the Compose network;
+  # inspect captured messages through the UI bound to localhost.
+  mailpit:
+    image: axllent/mailpit:v1.31.1
+    container_name: crm-mailpit
+    expose:
+      - "1025"
+    ports:
+      - "${MAILPIT_BIND_ADDRESS:-127.0.0.1}:${MAILPIT_UI_PORT:-8025}:8025"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
   api:
     build:
       context: ./backend
@@ -104,6 +120,8 @@ services:
       minio:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      mailpit:
         condition: service_healthy
     environment:
       ENV: ${ENV:-local}
@@ -146,12 +164,13 @@ services:
       FEATURE_NOTIFICATIONS_ENABLED: ${FEATURE_NOTIFICATIONS_ENABLED:-false}
       FEATURE_EXTERNAL_CHANNELS_ENABLED: ${FEATURE_EXTERNAL_CHANNELS_ENABLED:-false}
       FEATURE_CHAT_ENABLED: ${FEATURE_CHAT_ENABLED:-false}
-      SMTP_HOST: ${SMTP_HOST:-}
-      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
       SMTP_USERNAME: ${SMTP_USERNAME:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM: ${SMTP_FROM:-}
-      SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
+      SMTP_USE_TLS: ${SMTP_USE_TLS:-false}
+      SMTP_USE_SSL: ${SMTP_USE_SSL:-false}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
     ports:

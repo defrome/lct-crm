@@ -15,6 +15,7 @@ docker compose up --build
 | Keycloak | <http://localhost:8080> (admin / admin) |
 | Grafana | <http://localhost:3000> (admin / admin) |
 | Prometheus | <http://localhost:9090> |
+| Mailpit | <http://localhost:8025> |
 | MinIO Console | <http://localhost:9001> (см. `MINIO_ROOT_USER`/`MINIO_ROOT_PASSWORD`) |
 
 Миграции и демо-данные применяются автоматически при старте контейнера. Загруженные
