@@ -144,11 +144,12 @@ jobs:
         with:
           context: ${{ matrix.context }}
           push: true
+          # Always rebuild application images from the current checkout. A
+          # stale layer can otherwise keep a fixed bug in the deployed image.
+          no-cache: true
           tags: |
             ${{ steps.image.outputs.name }}:main
             ${{ steps.image.outputs.name }}:sha-${{ github.sha }}
-          cache-from: type=gha,scope=${{ matrix.component }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.component }}
 
   deploy:
     name: Deploy to test server
@@ -251,16 +252,18 @@ jobs:
           fi
 
           export API_IMAGE="$api_image" WEB_IMAGE="$web_image" IMAGE_TAG="$image_tag"
-          docker compose -f docker-compose.deploy.yml pull api web
+          # Refresh every image, not only the application images. This keeps
+          # long-lived services (mailpit, keycloak and monitoring included)
+          # from remaining on an old locally cached image.
+          docker compose -f docker-compose.deploy.yml pull
 
-          # Do not recreate stateful data services during an API release. Caddy
-          # and Keycloak are handled separately: their public URL/environment
-          # can change between releases, and --no-recreate would leave stale
-          # hostname/cookie settings in a running container.
-          if ! docker compose -f docker-compose.deploy.yml up -d --no-build --no-recreate db minio redis; then
+          # Recreate every service on each deployment so changed images and
+          # environment/configuration are applied immediately. Volumes are
+          # deliberately preserved, so database and monitoring data survive.
+          if ! docker compose -f docker-compose.deploy.yml up -d --no-build --force-recreate db minio redis mailpit; then
             echo "compose startup failed; recent container logs follow"
             docker compose -f docker-compose.deploy.yml ps || true
-            docker compose -f docker-compose.deploy.yml logs --tail=100 db minio redis || true
+            docker compose -f docker-compose.deploy.yml logs --tail=100 db minio redis mailpit || true
             exit 1
           fi
 
@@ -335,7 +338,7 @@ jobs:
           # Monitoring services are not dependencies of the API. Start them
           # explicitly before Caddy so its reverse proxy can resolve grafana
           # through Docker DNS as soon as the public endpoint is available.
-          if ! docker compose -f docker-compose.deploy.yml up -d --no-build prometheus grafana; then
+          if ! docker compose -f docker-compose.deploy.yml up -d --no-build --force-recreate prometheus grafana; then
             echo "monitoring startup failed; recent container logs follow"
             docker compose -f docker-compose.deploy.yml logs --tail=100 prometheus grafana || true
             exit 1
