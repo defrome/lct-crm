@@ -18,7 +18,7 @@ from app.models.workflow import (
     WorkflowTransition,
     WorkflowVersion,
 )
-from app.repositories.base import BaseRepository, visible_university_ids
+from app.repositories.base import BaseRepository, visible_interaction_condition
 
 
 class WorkflowRepository(BaseRepository[Workflow]):
@@ -294,11 +294,7 @@ class WorkflowAttachmentRepository(BaseRepository[WorkflowAttachment]):
             sa.select(Interaction.id).where(
                 Interaction.id == WorkflowAttachment.interaction_id,
                 Interaction.deleted_at.is_(None),
-                sa.or_(
-                    Interaction.responsible_user_id == self.scope.user_id,
-                    Interaction.responsible_user_id.is_(None),
-                    Interaction.university_id.in_(visible_university_ids(self.scope)),
-                ),
+                visible_interaction_condition(self.scope, Interaction),
             )
         )
         return stmt.where(interaction_visible)

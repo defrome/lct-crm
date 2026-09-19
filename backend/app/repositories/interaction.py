@@ -9,7 +9,7 @@ import sqlalchemy as sa
 from sqlalchemy.sql import Select
 
 from app.models.interaction import Interaction
-from app.repositories.base import BaseRepository, visible_university_ids
+from app.repositories.base import BaseRepository, visible_interaction_condition
 
 
 class InteractionRepository(BaseRepository[Interaction]):
@@ -36,18 +36,7 @@ class InteractionRepository(BaseRepository[Interaction]):
         unassigned cards, but assigning a card to a user must also make that
         card visible to its new owner.
         """
-        if self.scope.is_privileged or self.scope.visibility_mode == "all":
-            return stmt
-        return stmt.where(
-            sa.or_(
-                Interaction.responsible_user_id == self.scope.user_id,
-                sa.and_(
-                    Interaction.responsible_user_id.is_(None),
-                    Interaction.university_id.in_(visible_university_ids(self.scope)),
-                ),
-                Interaction.university_id.in_(visible_university_ids(self.scope)),
-            )
-        )
+        return stmt.where(visible_interaction_condition(self.scope, Interaction))
 
     async def find_by_business_key(
         self,

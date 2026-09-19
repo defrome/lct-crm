@@ -46,6 +46,21 @@ def visible_university_ids(scope: AccessScope) -> Select[tuple[uuid.UUID]]:
     )
 
 
+def visible_interaction_condition(scope: AccessScope, interaction_model: Any) -> Any:
+    """Return the row-level predicate shared by card-related queries.
+
+    A KAM may work with cards assigned directly to them even when the card's
+    university is outside their university assignment. Other cards follow the
+    university visibility policy.
+    """
+    if scope.is_privileged or scope.visibility_mode == "all":
+        return sa.true()
+    return sa.or_(
+        interaction_model.responsible_user_id == scope.user_id,
+        interaction_model.university_id.in_(visible_university_ids(scope)),
+    )
+
+
 class BaseRepository[ModelT: Base]:
     model: type[ModelT]
     # Columns matched by the `search` query parameter (case-insensitive).

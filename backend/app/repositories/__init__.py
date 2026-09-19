@@ -1,6 +1,10 @@
 """Data access layer. No business rules live here."""
 
-from app.repositories.base import BaseRepository, visible_university_ids
+from app.repositories.base import (
+    BaseRepository,
+    visible_interaction_condition,
+    visible_university_ids,
+)
 from app.repositories.import_job import (
     ImportJobRepository,
     ImportMappingPresetRepository,
@@ -42,5 +46,6 @@ __all__ = [
     "WorkflowStageRepository",
     "WorkflowTransitionRepository",
     "WorkflowVersionRepository",
+    "visible_interaction_condition",
     "visible_university_ids",
 ]

@@ -58,3 +58,23 @@ async def test_statistics_exports_png_and_pdf(session, client, manager_user, sco
     )
     assert pdf.status_code == 200
     assert pdf.content.startswith(b"%PDF")
+
+
+async def test_kam_sees_cards_assigned_directly_to_them_in_reports(
+    session, client, kam_user, scope
+):
+    university = await UniversityService(session, scope).create(
+        UniversityCreate(name="Чужой для КАМа вуз")
+    )
+    await InteractionService(session, scope).create(
+        InteractionCreate(university_id=university.id, responsible_user_id=kam_user.id)
+    )
+
+    response = await client.post(
+        "/api/v1/reports/export",
+        json={"format": "json", "columns": ["university"]},
+        headers=auth(kam_user),
+    )
+
+    assert response.status_code == 200
+    assert json.loads(response.content) == [{"university": "Чужой для КАМа вуз"}]

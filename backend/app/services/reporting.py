@@ -24,7 +24,7 @@ from app.models.product import ITDirection, ITProduct
 from app.models.university import University
 from app.models.user import User
 from app.models.workflow import WorkflowStage
-from app.repositories.base import visible_university_ids
+from app.repositories.base import visible_interaction_condition
 from app.schemas.report import ReportColumn, ReportFilters, ReportFormat
 
 COLUMN_TITLES: dict[ReportColumn, str] = {
@@ -104,14 +104,7 @@ class ReportingService:
             if value is not None:
                 conditions.append(getattr(Interaction, field) == value)
         conditions.extend(period_conditions(filters.period_from, filters.period_to))
-        if not self.scope.is_privileged and self.scope.visibility_mode != "all":
-            conditions.append(
-                sa.or_(
-                    Interaction.responsible_user_id == self.scope.user_id,
-                    Interaction.responsible_user_id.is_(None),
-                    Interaction.university_id.in_(visible_university_ids(self.scope)),
-                )
-            )
+        conditions.append(visible_interaction_condition(self.scope, Interaction))
         return stmt.where(*conditions)
 
     async def rows(
