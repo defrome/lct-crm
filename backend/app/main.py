@@ -55,7 +55,7 @@ def _client_ip(request: Request) -> str | None:
         forwarded = request.headers.get("Forwarded", "")
         forwarded_for = next(
             (
-                part.split("=", 1)[1].strip(' \"[]')
+                part.split("=", 1)[1].strip(' "[]')
                 for part in forwarded.split(";")
                 if part.strip().lower().startswith("for=")
             ),

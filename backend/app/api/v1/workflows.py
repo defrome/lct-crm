@@ -315,9 +315,7 @@ def _graph_response(graph: dict) -> WorkflowGraph:
     description="Возвращает этап процесса по его идентификатору.",
     responses=READ_ERRORS,
 )
-async def get_stage(
-    stage_id: uuid.UUID, session: SessionDep, scope: ScopeDep
-) -> StageRead:
+async def get_stage(stage_id: uuid.UUID, session: SessionDep, scope: ScopeDep) -> StageRead:
     stage = await WorkflowService(session, scope).stages.get_or_fail(stage_id)
     return StageRead.model_validate(stage)
 
