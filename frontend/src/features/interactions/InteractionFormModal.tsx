@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { ApiError } from '@/api/client';
 import { interactionsApi } from '@/api/endpoints';
 import type { InteractionCreate, InteractionRead } from '@/api/types';
+import { useWorkflows } from '@/api/queries';
 import { useToast } from '@/app/ToastProvider';
 import {
   DirectionPicker,
@@ -13,12 +14,14 @@ import {
   UserPicker,
 } from '@/components/pickers/EntityPickers';
 import { Button } from '@/components/ui/Button';
-import { TextArea, TextInput } from '@/components/ui/Field';
+import { Select, TextArea, TextInput } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { formatDate } from '@/lib/format';
 
 type FormState = {
   university_id: string | null;
+  counterparty_group: 'b2b' | 'b2c';
+  workflow_id: string | null;
   it_direction_id: string | null;
   it_product_id: string | null;
   responsible_user_id: string | null;
@@ -32,6 +35,8 @@ type FormState = {
 
 const EMPTY: FormState = {
   university_id: null,
+  counterparty_group: 'b2b',
+  workflow_id: null,
   it_direction_id: null,
   it_product_id: null,
   responsible_user_id: null,
@@ -46,6 +51,8 @@ const EMPTY: FormState = {
 function fromRecord(record: InteractionRead): FormState {
   return {
     university_id: record.university_id,
+    counterparty_group: record.counterparty_group,
+    workflow_id: null,
     it_direction_id: record.it_direction_id,
     it_product_id: record.it_product_id,
     responsible_user_id: record.responsible_user_id,
@@ -83,6 +90,7 @@ export function InteractionFormModal({
 }) {
   const toast = useToast();
   const client = useQueryClient();
+  const workflows = useWorkflows({ size: 200 });
   const [form, setForm] = useState<FormState>(EMPTY);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -99,6 +107,8 @@ export function InteractionFormModal({
     mutationFn: async () => {
       const body: InteractionCreate = {
         university_id: form.university_id!,
+        counterparty_group: form.counterparty_group,
+        workflow_id: form.workflow_id,
         it_direction_id: form.it_direction_id,
         it_product_id: form.it_product_id,
         responsible_user_id: form.responsible_user_id,
@@ -109,9 +119,11 @@ export function InteractionFormModal({
         transfer_status: form.transfer_status.trim() || null,
         comment: form.comment.trim() || null,
       };
-      return record
-        ? interactionsApi.update(record.id, body)
-        : interactionsApi.create(body);
+      if (record) {
+        const { counterparty_group: _group, workflow_id: _workflow, ...update } = body;
+        return interactionsApi.update(record.id, update);
+      }
+      return interactionsApi.create(body);
     },
     onSuccess: (saved) => {
       void client.invalidateQueries({ queryKey: ['interactions'] });
@@ -126,6 +138,11 @@ export function InteractionFormModal({
   });
 
   const expiry = derivedExpiry(form.license_signed_at, form.license_years);
+  const availableWorkflows = (workflows.data?.items ?? []).filter(
+    (workflow) =>
+      workflow.is_active &&
+      workflow.counterparty_group === form.counterparty_group,
+  );
 
   return (
     <Modal
@@ -159,6 +176,39 @@ export function InteractionFormModal({
           onChange={(value) => patch({ university_id: value })}
           error={fieldErrors.university_id}
         />
+        {!record && (
+          <>
+            <Select
+              label="Группа контрагента"
+              value={form.counterparty_group}
+              options={[
+                { value: 'b2b', label: 'B2B' },
+                { value: 'b2c', label: 'B2C' },
+              ]}
+              onChange={(event) => patch({
+                counterparty_group: event.target.value as 'b2b' | 'b2c',
+                workflow_id: null,
+              })}
+            />
+            <Select
+              label="Маршрут"
+              value={form.workflow_id ?? ''}
+              placeholder={
+                workflows.isPending
+                  ? 'Загрузка маршрутов…'
+                  : 'По умолчанию для группы'
+              }
+              options={availableWorkflows.map((workflow) => ({
+                value: workflow.id,
+                label: `${workflow.name}${workflow.is_default ? ' (по умолчанию)' : ''}`,
+              }))}
+              disabled={workflows.isPending}
+              onChange={(event) => patch({ workflow_id: event.target.value || null })}
+              hint="Карточка сразу начнёт путь по опубликованной версии выбранного маршрута"
+              error={fieldErrors.workflow_id}
+            />
+          </>
+        )}
         <DirectionPicker
           label="ИТ-направление"
           value={form.it_direction_id}

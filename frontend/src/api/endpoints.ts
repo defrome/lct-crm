@@ -26,6 +26,8 @@ import type {
   InteractionRead,
   InteractionUpdate,
   MappingRequest,
+  MigrationPreview,
+  MigrationPreviewRequest,
   NotificationDeliveryRead,
   NotificationRuleCreate,
   NotificationRuleRead,
@@ -37,9 +39,12 @@ import type {
   ProductRead,
   RouteStartRequest,
   RouteView,
+  PublishRequest,
   StageCreate,
   StageHistoryRead,
   StageRead,
+  StageDeletePreview,
+  StageDeleteRequest,
   StageRename,
   StageStructureUpdate,
   TransitionCreate,
@@ -191,6 +196,10 @@ export const workflowsApi = {
     api.post<VersionRead>(`/workflows/${id}/versions`, body ?? {}),
   publish: (id: UUID, versionId: UUID) =>
     api.post<VersionRead>(`/workflows/${id}/versions/${versionId}/publish`),
+  migrationPreview: (id: UUID, versionId: UUID, body: MigrationPreviewRequest) =>
+    api.post<MigrationPreview>(`/workflows/${id}/versions/${versionId}/migration-preview`, body),
+  publishWithMigration: (id: UUID, versionId: UUID, body: PublishRequest) =>
+    api.post<VersionRead>(`/workflows/${id}/versions/${versionId}/publish`, body),
 
   graph: (id: UUID) => api.get<WorkflowGraph>(`/workflows/${id}/graph`),
   versionGraph: (id: UUID, versionId: UUID) =>
@@ -211,7 +220,9 @@ export const stagesApi = {
   rename: (id: UUID, body: StageRename) => api.patch<StageRead>(`/workflow-stages/${id}`, body),
   updateStructure: (id: UUID, body: StageStructureUpdate) =>
     api.patch<StageRead>(`/workflow-stages/${id}/structure`, body),
-  remove: (id: UUID) => api.delete(`/workflow-stages/${id}`),
+  deletePreview: (id: UUID) => api.get<StageDeletePreview>(`/workflow-stages/${id}/delete-preview`),
+  remove: (id: UUID, body: StageDeleteRequest) =>
+    api.deleteWithBody(`/workflow-stages/${id}`, body),
 };
 
 export const transitionsApi = {

@@ -1,10 +1,10 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
 import { stagesApi, transitionsApi, workflowsApi } from '@/api/endpoints';
 import { useWorkflow, useWorkflowGraph, useWorkflowVersions } from '@/api/queries';
-import type { StageRead, TransitionRead, VersionRead } from '@/api/types';
+import type { MigrationPreview, StageRead, TransitionRead, UUID, VersionRead } from '@/api/types';
 import { useAuth } from '@/app/AuthProvider';
 import { useToast } from '@/app/ToastProvider';
 import { Page } from '@/components/layout/AppShell';
@@ -64,14 +64,7 @@ export function WorkflowDetailPage() {
     onError: (error) => toast.fail(error, 'Не удалось создать черновик'),
   });
 
-  const publish = useMutation({
-    mutationFn: () => workflowsApi.publish(id!, version!.id),
-    onSuccess: (published) => {
-      void client.invalidateQueries({ queryKey: ['workflows'] });
-      toast.notify('Версия опубликована', `Новые карточки пойдут по версии ${published.version}`);
-    },
-    onError: (error) => toast.fail(error, 'Не удалось опубликовать версию'),
-  });
+  const [publishing, setPublishing] = useState(false);
 
   if (workflow.error) {
     return (
@@ -105,9 +98,8 @@ export function WorkflowDetailPage() {
                 <Button
                   variant="primary"
                   icon="check"
-                  loading={publish.isPending}
                   disabled={stages.length === 0}
-                  onClick={() => publish.mutate()}
+                  onClick={() => setPublishing(true)}
                 >
                   Опубликовать версию
                 </Button>
@@ -193,6 +185,7 @@ export function WorkflowDetailPage() {
                   last={index === stages.length - 1}
                   cards={cardsPerStage.get(stage.id) ?? 0}
                   editable={Boolean(editable)}
+                  renamable={can('manager') && (isDraft || can('admin'))}
                   workflowId={id!}
                   outgoing={transitions.filter((item) => item.from_stage_id === stage.id)}
                   stages={stages}
@@ -222,6 +215,13 @@ export function WorkflowDetailPage() {
 
       {version && (
         <>
+          <PublishVersionModal
+            open={publishing}
+            onClose={() => setPublishing(false)}
+            workflowId={id!}
+            version={version}
+            targetStages={stages}
+          />
           <StageFormModal
             open={addingStage}
             onClose={() => setAddingStage(false)}
@@ -286,12 +286,220 @@ function VersionBar({
   );
 }
 
+function PublishVersionModal({
+  open,
+  onClose,
+  workflowId,
+  version,
+  targetStages,
+}: {
+  open: boolean;
+  onClose: () => void;
+  workflowId: UUID;
+  version: VersionRead;
+  targetStages: StageRead[];
+}) {
+  const toast = useToast();
+  const client = useQueryClient();
+  const [preview, setPreview] = useState<MigrationPreview | null>(null);
+  const [mappings, setMappings] = useState<Record<string, string>>({});
+  const sourceGraph = useQuery({
+    queryKey: ['workflows', workflowId, 'graph', preview?.source_version_id],
+    queryFn: () => workflowsApi.versionGraph(workflowId, preview!.source_version_id!),
+    enabled: Boolean(preview?.source_version_id),
+  });
+
+  const previewMutation = useMutation({
+    mutationFn: () =>
+      workflowsApi.migrationPreview(workflowId, version.id, {
+        stage_mappings: Object.entries(mappings)
+          .filter(([, toStageId]) => Boolean(toStageId))
+          .map(([from_stage_id, to_stage_id]) => ({ from_stage_id, to_stage_id })),
+      }),
+    onSuccess: setPreview,
+    onError: (error) => toast.fail(error, 'Не удалось получить последствия публикации'),
+  });
+
+  const publish = useMutation({
+    mutationFn: () =>
+      workflowsApi.publishWithMigration(workflowId, version.id, {
+        confirm_migration: true,
+        stage_mappings: Object.entries(mappings)
+          .filter(([, toStageId]) => Boolean(toStageId))
+          .map(([from_stage_id, to_stage_id]) => ({ from_stage_id, to_stage_id })),
+      }),
+    onSuccess: (published) => {
+      void client.invalidateQueries({ queryKey: ['workflows'] });
+      toast.notify('Версия опубликована', `Новые карточки пойдут по версии ${published.version}`);
+      onClose();
+    },
+    onError: (error) => toast.fail(error, 'Не удалось опубликовать версию'),
+  });
+
+  useEffect(() => {
+    if (!open) {
+      setPreview(null);
+      setMappings({});
+      return;
+    }
+    previewMutation.mutate();
+  // A new preview is explicitly requested after mapping changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const refreshPreview = () => previewMutation.mutate();
+  const unmapped = new Set(preview?.unmapped_stage_ids ?? []);
+  const canPublish = preview !== null && unmapped.size === 0;
+  const sourceStages = sourceGraph.data?.stages ?? [];
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      size="lg"
+      title="Опубликовать версию"
+      description="Проверьте, как изменятся активные карточки, прежде чем подтвердить публикацию."
+      footer={
+        <>
+          <Button onClick={onClose} disabled={publish.isPending}>Отмена</Button>
+          <Button
+            variant="primary"
+            loading={publish.isPending}
+            disabled={!canPublish || previewMutation.isPending}
+            onClick={() => publish.mutate()}
+          >
+            Опубликовать
+          </Button>
+        </>
+      }
+    >
+      {previewMutation.isPending && !preview ? (
+        <div className="flex flex-col gap-3 py-3">
+          <Skeleton className="h-5 w-2/3" />
+          <Skeleton className="h-12 w-full" />
+        </div>
+      ) : preview ? (
+        <div className="flex flex-col gap-4">
+          <p className="text-body-m text-fg-soft">
+            Затронуто активных карточек: <strong className="text-fg">{preview.affected_count}</strong>.
+          </p>
+          {preview.affected_count > 0 && (
+            <div className="overflow-hidden rounded-m border border-line-soft">
+              <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3 bg-surface-2 px-3 py-2 text-desc font-medium text-fg-muted">
+                <span>Текущий этап</span><span>Этап после миграции</span>
+              </div>
+              <div className="max-h-64 divide-y divide-line-soft overflow-y-auto">
+                {preview.affected_cards.map((item) => {
+                  const from = sourceStages.find((stage) => stage.id === item.from_stage_id);
+                  return (
+                    <div key={item.interaction_id} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-center gap-3 px-3 py-2">
+                      <span className="truncate text-body-s text-fg">{from?.name ?? item.from_stage_id}</span>
+                      <Select
+                        aria-label={`Этап назначения для карточки ${item.interaction_id}`}
+                        value={mappings[item.from_stage_id] ?? item.to_stage_id ?? ''}
+                        placeholder="Выберите этап"
+                        options={targetStages.map((stage) => ({ value: stage.id, label: stage.name }))}
+                        onChange={(event) => setMappings((current) => ({
+                          ...current,
+                          [item.from_stage_id]: event.target.value,
+                        }))}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          {unmapped.size > 0 && (
+            <p className="text-body-s text-error">Выберите этап назначения для всех затронутых этапов.</p>
+          )}
+          <Button onClick={refreshPreview} loading={previewMutation.isPending} icon="refresh">
+            Обновить предпросмотр
+          </Button>
+        </div>
+      ) : null}
+    </Modal>
+  );
+}
+
+function StageDeleteModal({
+  open,
+  onClose,
+  stage,
+  stages,
+  workflowId,
+}: {
+  open: boolean;
+  onClose: () => void;
+  stage: StageRead;
+  stages: StageRead[];
+  workflowId: UUID;
+}) {
+  const toast = useToast();
+  const client = useQueryClient();
+  const [targetStageId, setTargetStageId] = useState('');
+  const preview = useMutation({
+    mutationFn: () => stagesApi.deletePreview(stage.id),
+    onSuccess: (result) => setTargetStageId(result.suggested_target_stage_id ?? ''),
+    onError: (error) => toast.fail(error, 'Не удалось получить последствия удаления'),
+  });
+  const remove = useMutation({
+    mutationFn: () => stagesApi.remove(stage.id, { target_stage_id: targetStageId, confirm: true }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['workflows', workflowId] });
+      toast.notify('Этап удалён');
+      onClose();
+    },
+    onError: (error) => toast.fail(error, 'Не удалось удалить этап'),
+  });
+
+  useEffect(() => {
+    if (open) preview.mutate();
+  // The preview is always fetched afresh when the dialog opens.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, stage.id]);
+
+  const alternatives = stages.filter((candidate) => candidate.id !== stage.id);
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Удалить этап"
+      description="Карточки на этом этапе будут переведены в выбранный этап одной операцией."
+      footer={
+        <>
+          <Button onClick={onClose} disabled={remove.isPending}>Отмена</Button>
+          <Button variant="danger" loading={remove.isPending} disabled={!targetStageId} onClick={() => remove.mutate()}>
+            Удалить этап
+          </Button>
+        </>
+      }
+    >
+      {preview.isPending ? <Skeleton className="h-12 w-full" /> : (
+        <div className="flex flex-col gap-4">
+          <p className="text-body-m text-fg-soft">
+            Будет переведено карточек: <strong className="text-fg">{preview.data?.affected_count ?? 0}</strong>.
+          </p>
+          <Select
+            label="Этап назначения"
+            value={targetStageId}
+            required
+            options={alternatives.map((candidate) => ({ value: candidate.id, label: candidate.name }))}
+            onChange={(event) => setTargetStageId(event.target.value)}
+          />
+        </div>
+      )}
+    </Modal>
+  );
+}
+
 function StageRow({
   stage,
   index,
   last,
   cards,
   editable,
+  renamable,
   workflowId,
   outgoing,
   stages,
@@ -301,24 +509,13 @@ function StageRow({
   last: boolean;
   cards: number;
   editable: boolean;
+  renamable: boolean;
   workflowId: string;
   outgoing: TransitionRead[];
   stages: StageRead[];
 }) {
   const [renaming, setRenaming] = useState(false);
   const [removing, setRemoving] = useState(false);
-  const toast = useToast();
-  const client = useQueryClient();
-
-  const remove = useMutation({
-    mutationFn: () => stagesApi.remove(stage.id),
-    onSuccess: () => {
-      void client.invalidateQueries({ queryKey: ['workflows', workflowId] });
-      toast.notify('Этап удалён');
-      setRemoving(false);
-    },
-    onError: (error) => toast.fail(error, 'Не удалось удалить этап'),
-  });
 
   const shortcuts = outgoing
     .map((transition) => ({
@@ -366,20 +563,24 @@ function StageRow({
             </Badge>
           )}
 
-          {editable && (
+          {(editable || renamable) && (
             <span className="ml-auto flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
-              <IconButton
-                icon="edit"
-                label={`Изменить этап ${stage.name}`}
-                size="m"
-                onClick={() => setRenaming(true)}
-              />
-              <IconButton
-                icon="trash"
-                label={`Удалить этап ${stage.name}`}
-                size="m"
-                onClick={() => setRemoving(true)}
-              />
+              {renamable && (
+                <IconButton
+                  icon="edit"
+                  label={`Изменить этап ${stage.name}`}
+                  size="m"
+                  onClick={() => setRenaming(true)}
+                />
+              )}
+              {editable && (
+                <IconButton
+                  icon="trash"
+                  label={`Удалить этап ${stage.name}`}
+                  size="m"
+                  onClick={() => setRemoving(true)}
+                />
+              )}
             </span>
           )}
         </div>
@@ -400,23 +601,20 @@ function StageRow({
       </div>
 
       {renaming && (
-        <StageEditModal stage={stage} workflowId={workflowId} onClose={() => setRenaming(false)} />
+        <StageEditModal
+          stage={stage}
+          workflowId={workflowId}
+          allowStructure={editable}
+          onClose={() => setRenaming(false)}
+        />
       )}
 
-      <ConfirmModal
+      <StageDeleteModal
         open={removing}
         onClose={() => setRemoving(false)}
-        onConfirm={() => remove.mutate()}
-        loading={remove.isPending}
-        danger
-        title="Удалить этап?"
-        confirmLabel="Удалить"
-        message={
-          <>
-            «{stage.name}» исчезнет из черновика вместе с переходами, которые его касаются.
-            Опубликованные версии не изменятся.
-          </>
-        }
+        stage={stage}
+        stages={stages}
+        workflowId={workflowId}
       />
     </li>
   );
@@ -425,10 +623,12 @@ function StageRow({
 function StageEditModal({
   stage,
   workflowId,
+  allowStructure,
   onClose,
 }: {
   stage: StageRead;
   workflowId: string;
+  allowStructure: boolean;
   onClose: () => void;
 }) {
   const toast = useToast();
@@ -439,6 +639,7 @@ function StageEditModal({
   const [isInitial, setIsInitial] = useState(stage.is_initial);
   const [isTerminal, setIsTerminal] = useState(stage.is_terminal);
   const [isFinalSuccess, setIsFinalSuccess] = useState(stage.is_final_success);
+  const [confirmRename, setConfirmRename] = useState(false);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -447,13 +648,16 @@ function StageEditModal({
       await stagesApi.rename(stage.id, {
         name: name.trim(),
         description: description.trim() || null,
+        confirm: allowStructure ? undefined : confirmRename,
       });
-      await stagesApi.updateStructure(stage.id, {
-        code: code.trim() || null,
-        is_initial: isInitial,
-        is_terminal: isTerminal,
-        is_final_success: isFinalSuccess,
-      });
+      if (allowStructure) {
+        await stagesApi.updateStructure(stage.id, {
+          code: code.trim() || null,
+          is_initial: isInitial,
+          is_terminal: isTerminal,
+          is_final_success: isFinalSuccess,
+        });
+      }
     },
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ['workflows', workflowId] });
@@ -477,7 +681,7 @@ function StageEditModal({
           <Button
             variant="primary"
             loading={save.isPending}
-            disabled={name.trim().length === 0}
+            disabled={name.trim().length === 0 || (!allowStructure && !confirmRename)}
             onClick={() => save.mutate()}
           >
             Сохранить
@@ -493,21 +697,31 @@ function StageEditModal({
           value={name}
           onChange={(event) => setName(event.target.value)}
         />
-        <TextInput
-          label="Код"
-          mono
-          placeholder="WF-07"
-          hint="Короткая метка для таблиц и отчётов"
-          value={code}
-          onChange={(event) => setCode(event.target.value)}
-        />
+        {allowStructure && (
+          <TextInput
+            label="Код"
+            mono
+            placeholder="WF-07"
+            hint="Короткая метка для таблиц и отчётов"
+            value={code}
+            onChange={(event) => setCode(event.target.value)}
+          />
+        )}
         <TextArea
           label="Описание"
           rows={2}
           value={description}
           onChange={(event) => setDescription(event.target.value)}
         />
-        <div className="flex flex-col gap-3 pt-2">
+        {!allowStructure && (
+          <Checkbox
+            label="Подтверждаю переименование опубликованного этапа"
+            hint="Новое название будет видно во всех карточках на этом этапе"
+            checked={confirmRename}
+            onChange={(event) => setConfirmRename(event.target.checked)}
+          />
+        )}
+        {allowStructure && <div className="flex flex-col gap-3 pt-2">
           <p className="text-h4 font-bold text-fg">Роль этапа в маршруте</p>
           <Checkbox
             label="Начальный"
@@ -527,7 +741,7 @@ function StageEditModal({
             checked={isFinalSuccess}
             onChange={(event) => setIsFinalSuccess(event.target.checked)}
           />
-        </div>
+        </div>}
       </div>
     </Modal>
   );

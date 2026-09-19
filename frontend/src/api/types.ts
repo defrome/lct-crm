@@ -195,9 +195,12 @@ export interface ProductCreate {
 
 // --- Взаимодействия ---------------------------------------------------------
 
+export type CounterpartyGroup = 'b2b' | 'b2c';
+
 export interface InteractionRead {
   id: UUID;
   university_id: UUID;
+  counterparty_group: CounterpartyGroup;
   university?: UniversityShort | null;
   it_direction_id: UUID | null;
   it_direction?: DirectionRead | null;
@@ -219,6 +222,8 @@ export interface InteractionRead {
 
 export interface InteractionCreate {
   university_id: UUID;
+  counterparty_group?: CounterpartyGroup;
+  workflow_id?: UUID | null;
   it_direction_id?: UUID | null;
   it_product_id?: UUID | null;
   responsible_user_id?: UUID | null;
@@ -299,6 +304,7 @@ export interface WorkflowRead {
   id: UUID;
   name: string;
   description: string | null;
+  counterparty_group: CounterpartyGroup;
   is_default: boolean;
   is_active: boolean;
   created_at: DateTime;
@@ -308,6 +314,7 @@ export interface WorkflowRead {
 export interface WorkflowCreate {
   name: string;
   description?: string | null;
+  counterparty_group?: CounterpartyGroup;
   is_default?: boolean;
 }
 
@@ -354,6 +361,7 @@ export interface StageCreate {
 export interface StageRename {
   name: string;
   description?: string | null;
+  confirm?: boolean;
 }
 
 export interface StageStructureUpdate {
@@ -391,6 +399,46 @@ export interface WorkflowGraph {
   stages: StageRead[];
   transitions: TransitionRead[];
   cards_per_stage?: StageCardCount[];
+}
+
+export interface StageMigration {
+  from_stage_id: UUID;
+  to_stage_id: UUID;
+}
+
+export interface MigrationPreviewRequest {
+  stage_mappings: StageMigration[];
+}
+
+export interface MigrationPreviewItem {
+  interaction_id: UUID;
+  from_stage_id: UUID;
+  to_stage_id: UUID | null;
+}
+
+export interface MigrationPreview {
+  source_version_id: UUID | null;
+  target_version_id: UUID;
+  affected_cards: MigrationPreviewItem[];
+  affected_count: number;
+  unmapped_stage_ids: UUID[];
+}
+
+export interface PublishRequest extends MigrationPreviewRequest {
+  confirm_migration: boolean;
+}
+
+export interface StageDeleteRequest {
+  target_stage_id: UUID;
+  confirm: boolean;
+}
+
+export interface StageDeletePreview {
+  stage_id: UUID;
+  workflow_version_id: UUID;
+  affected_count: number;
+  interaction_ids: UUID[];
+  suggested_target_stage_id: UUID | null;
 }
 
 export interface StageHistoryRead {

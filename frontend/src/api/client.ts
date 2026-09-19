@@ -185,6 +185,9 @@ export const api = {
   delete: <T = void>(path: string, params?: QueryParams) =>
     json<T>(path, { method: 'DELETE', params }),
 
+  deleteWithBody: <T = void>(path: string, body: unknown) =>
+    json<T>(path, { method: 'DELETE', body }),
+
   upload: <T>(path: string, form: FormData, params?: QueryParams) =>
     json<T>(path, { method: 'POST', body: form, raw: true, params }),
 
