@@ -5,8 +5,15 @@
 {$DOMAIN} {
 	encode gzip
 
-	# nginx strips /kc/ before proxying to Keycloak and serves the SPA/API routes.
-	# KC_HOSTNAME includes this path, so redirects and cookies stay same-origin.
+	# Keep the Keycloak hop in the edge proxy.  This avoids depending on the
+	# frontend nginx container's DNS/proxy state for the first login request.
+	# handle_path removes /kc before forwarding; KC_HOSTNAME still advertises
+	# the public https://DOMAIN/kc URL for redirects and cookies.
+	handle_path /kc/* {
+		reverse_proxy keycloak:8080
+	}
+
+	# The frontend nginx serves the SPA and proxies API/documentation routes.
 	handle {
 		reverse_proxy web:80
 	}
