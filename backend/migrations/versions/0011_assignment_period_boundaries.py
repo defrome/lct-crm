@@ -1,7 +1,7 @@
 """Treat assignment end dates as exclusive for same-day handoffs.
 
 Revision ID: 0011_assignment_period_boundaries
-Revises: 0010_notification_rule_uniqueness
+Revises: 0010_notification_rule_unique
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "0011_assignment_period_boundaries"
-down_revision: str | None = "0010_notification_rule_uniqueness"
+down_revision: str | None = "0010_notification_rule_unique"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
