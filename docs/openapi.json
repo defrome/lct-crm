@@ -4983,6 +4983,68 @@
       }
     },
     "/api/v1/workflow-stages/{stage_id}": {
+      "get": {
+        "tags": [
+          "Workflow: настройка"
+        ],
+        "summary": "Получить этап",
+        "description": "Возвращает этап процесса по его идентификатору.",
+        "operationId": "get_stage_api_v1_workflow_stages__stage_id__get",
+        "parameters": [
+          {
+            "name": "stage_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Stage Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StageRead"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Доступ запрещён. Коды: ACCESS_DENIED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Объект не найден. Коды: NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "patch": {
         "tags": [
           "Workflow: настройка"
@@ -7249,7 +7311,8 @@
         "tags": [
           "Коммуникации и обучение"
         ],
-        "summary": "Notification Deliveries",
+        "summary": "Notification delivery list",
+        "description": "Returns notification deliveries available to the current user.",
         "operationId": "notification_deliveries_api_v1_notifications_get",
         "responses": {
           "200": {

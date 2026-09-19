@@ -177,6 +177,22 @@ def test_client_ip_uses_forwarded_for_from_private_proxy():
     assert _client_ip(request) == "198.51.100.42"
 
 
+def test_client_ip_uses_standard_forwarded_header_from_private_proxy():
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/",
+            "headers": [(b"forwarded", b"for=198.51.100.42;proto=https")],
+            "client": ("172.20.0.9", 1234),
+            "server": ("api", 8000),
+            "scheme": "http",
+        }
+    )
+
+    assert _client_ip(request) == "198.51.100.42"
+
+
 def test_client_ip_ignores_forwarded_for_from_public_peer():
     request = Request(
         {

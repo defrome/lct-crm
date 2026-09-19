@@ -50,6 +50,18 @@ def _client_ip(request: Request) -> str | None:
 
     forwarded_for = request.headers.get("X-Forwarded-For")
     if not forwarded_for:
+        # RFC 7239 is used by some ingress/proxy setups instead of the
+        # de-facto X-Forwarded-For header.
+        forwarded = request.headers.get("Forwarded", "")
+        forwarded_for = next(
+            (
+                part.split("=", 1)[1].strip(' \"[]')
+                for part in forwarded.split(";")
+                if part.strip().lower().startswith("for=")
+            ),
+            None,
+        )
+    if not forwarded_for:
         return peer
 
     # Proxies append addresses to the right; the leftmost valid address is the

@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import uuid
-from typing import ClassVar
+from typing import Any, ClassVar
 
 import sqlalchemy as sa
+from sqlalchemy.sql import Select
 
 from app.models.interaction import Interaction
-from app.repositories.base import BaseRepository
+from app.repositories.base import BaseRepository, visible_university_ids
 
 
 class InteractionRepository(BaseRepository[Interaction]):
@@ -27,6 +28,26 @@ class InteractionRepository(BaseRepository[Interaction]):
     )
     default_order: ClassVar[tuple[str, ...]] = ("-created_at",)
     university_scope_column: ClassVar[str | None] = "university_id"
+
+    def _access_filter(self, stmt: Select[Any]) -> Select[Any]:
+        """A responsible KAM can see an explicitly assigned card anywhere.
+
+        University assignments remain the default visibility boundary for
+        unassigned cards, but assigning a card to a user must also make that
+        card visible to its new owner.
+        """
+        if self.scope.is_privileged or self.scope.visibility_mode == "all":
+            return stmt
+        return stmt.where(
+            sa.or_(
+                Interaction.responsible_user_id == self.scope.user_id,
+                sa.and_(
+                    Interaction.responsible_user_id.is_(None),
+                    Interaction.university_id.in_(visible_university_ids(self.scope)),
+                ),
+                Interaction.university_id.in_(visible_university_ids(self.scope)),
+            )
+        )
 
     async def find_by_business_key(
         self,

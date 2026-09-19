@@ -107,6 +107,7 @@ class ReportingService:
         if not self.scope.is_privileged and self.scope.visibility_mode != "all":
             conditions.append(
                 sa.or_(
+                    Interaction.responsible_user_id == self.scope.user_id,
                     Interaction.responsible_user_id.is_(None),
                     Interaction.university_id.in_(visible_university_ids(self.scope)),
                 )

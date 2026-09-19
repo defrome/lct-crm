@@ -124,6 +124,13 @@ export const ENTITY_LABELS: Record<string, string> = {
   import_jobs: 'Задача импорта',
   attachments: 'Вложение',
   interaction_stage_history: 'Перемещение карточки',
+  workflow_stage_rename: 'Переименование этапа',
+  workflow_stage_bulk_transfer: 'Перенос карточек между этапами',
+  notification_rules: 'Правило уведомлений',
+  notification_deliveries: 'Доставка уведомления',
+  chat_messages: 'Сообщение',
+  education_participants: 'Участник обучения',
+  education_activities: 'Образовательное мероприятие',
 };
 
 export function entityLabel(entityType: string): string {
@@ -171,10 +178,41 @@ export const FIELD_LABELS: Record<string, string> = {
   filename: 'Файл',
   status: 'Статус',
   deleted_at: 'Удалено',
+  workflow_transition_id: 'Переход процесса',
+  stale_after_days: 'Срок бездействия, дней',
+  recipient_kind: 'Тип получателя',
+  recipient_role: 'Роль получателя',
+  recipient_user_id: 'Получатель',
+  channel: 'Канал',
+  is_enabled: 'Включено',
+  created_by: 'Создал',
+  updated_by: 'Изменил',
+  rule_id: 'Правило',
+  interaction_id: 'Карточка',
+  attempts: 'Попытки',
+  sent_at: 'Отправлено',
+  error_message: 'Ошибка доставки',
+  payload: 'Данные уведомления',
+};
+
+const AUDIT_VALUE_LABELS: Record<string, Record<string, string>> = {
+  channel: { email: 'Email', telegram: 'Telegram', max: 'MAX' },
+  recipient_kind: {
+    responsible: 'Ответственный',
+    manager: 'Руководители',
+    role: 'Роль',
+    user: 'Пользователь',
+  },
+  is_enabled: { true: 'Да', false: 'Нет' },
 };
 
 export function fieldLabel(field: string): string {
   return FIELD_LABELS[field] ?? field;
+}
+
+export function auditValueLabel(field: string, value: unknown): unknown {
+  if (typeof value !== 'string') return value;
+  return AUDIT_VALUE_LABELS[field]?.[value] ?? value;
 }
 
 /**

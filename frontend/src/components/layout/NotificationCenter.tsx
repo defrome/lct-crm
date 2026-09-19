@@ -39,7 +39,7 @@ export function NotificationCenter() {
   });
   const [showRuleForm, setShowRuleForm] = useState(false);
   const [days, setDays] = useState('14');
-  const [channel, setChannel] = useState<'email' | 'telegram' | 'max'>('email');
+  const [channel, setChannel] = useState<'email' | 'telegram'>('email');
   const createRule = useMutation({
     mutationFn: () =>
       notificationsApi.createRule({
@@ -145,7 +145,6 @@ export function NotificationCenter() {
                     options={[
                       { value: 'email', label: 'Email' },
                       { value: 'telegram', label: 'Telegram' },
-                      { value: 'max', label: 'MAX' },
                     ]}
                   />
                   <Button type="submit" size="s" variant="primary" loading={createRule.isPending}>

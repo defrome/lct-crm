@@ -295,6 +295,7 @@ class WorkflowAttachmentRepository(BaseRepository[WorkflowAttachment]):
                 Interaction.id == WorkflowAttachment.interaction_id,
                 Interaction.deleted_at.is_(None),
                 sa.or_(
+                    Interaction.responsible_user_id == self.scope.user_id,
                     Interaction.responsible_user_id.is_(None),
                     Interaction.university_id.in_(visible_university_ids(self.scope)),
                 ),

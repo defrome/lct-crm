@@ -358,6 +358,13 @@ async def test_stage_delete_preview_api_requires_explicit_confirmation(
     assert preview.status_code == 200
     assert preview.json()["suggested_target_stage_id"] == str(draft_stages["WF-02"].id)
 
+    fetched = await client.get(
+        f"/api/v1/workflow-stages/{draft_stages['WF-01'].id}",
+        headers=auth(manager_user),
+    )
+    assert fetched.status_code == 200
+    assert fetched.json()["id"] == str(draft_stages["WF-01"].id)
+
     refused = await client.request(
         "DELETE",
         f"/api/v1/workflow-stages/{draft_stages['WF-01'].id}",

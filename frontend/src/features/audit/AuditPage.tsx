@@ -14,6 +14,7 @@ import { useFilters } from '@/hooks';
 import {
   AUDIT_LABELS,
   ENTITY_LABELS,
+  auditValueLabel,
   entityLabel,
   fieldLabel,
   formatDateTime,
@@ -192,7 +193,7 @@ function AuditRow({ entry }: { entry: AuditLogRead }) {
                   <dt className="text-fg-muted" title={key}>
                     {fieldLabel(key)}
                   </dt>
-                  <dd className="min-w-0 break-words text-fg">{renderChange(changes[key])}</dd>
+                  <dd className="min-w-0 break-words text-fg">{renderChange(key, changes[key])}</dd>
                 </div>
               ))}
             </dl>
@@ -210,7 +211,7 @@ function AuditRow({ entry }: { entry: AuditLogRead }) {
 }
 
 /** Audit changes arrive as `{before, after}` pairs or as a plain value. */
-function renderChange(value: unknown) {
+function renderChange(field: string, value: unknown) {
   if (value && typeof value === 'object' && !Array.isArray(value)) {
     const record = value as Record<string, unknown>;
     const before = record.before ?? record.old;
@@ -218,14 +219,16 @@ function renderChange(value: unknown) {
     if (before !== undefined || after !== undefined) {
       return (
         <span className="flex flex-wrap items-center gap-1.5">
-          <span className="text-fg-muted line-through">{stringify(before)}</span>
+          <span className="text-fg-muted line-through">
+            {stringify(auditValueLabel(field, before))}
+          </span>
           <Icon name="arrowRight" className="size-3 text-fg-muted" />
-          <span className="text-fg">{stringify(after)}</span>
+          <span className="text-fg">{stringify(auditValueLabel(field, after))}</span>
         </span>
       );
     }
   }
-  return <span>{stringify(value)}</span>;
+  return <span>{stringify(auditValueLabel(field, value))}</span>;
 }
 
 function stringify(value: unknown): string {

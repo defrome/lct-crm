@@ -94,6 +94,21 @@ async def test_interactions_inherit_university_scope(session, kam_user):
         await scoped.get(foreign_interaction.id)
 
 
+async def test_user_sees_card_assigned_to_them_even_on_foreign_university(session, kam_user):
+    await _university_with_kam(session, kam_user, "РњРѕР№ РІСѓР·")
+    universities = UniversityService(session, AccessScope.system())
+    foreign = await universities.create(UniversityCreate(name="Р§СѓР¶РѕР№ РІСѓР·"))
+    interaction = await InteractionService(session, AccessScope.system()).create(
+        InteractionCreate(university_id=foreign.id, responsible_user_id=kam_user.id)
+    )
+
+    scoped = InteractionService(session, AccessScope(user_id=kam_user.id, is_privileged=False))
+    items, total = await scoped.list()
+    assert total == 1
+    assert items[0].id == interaction.id
+    assert (await scoped.get(interaction.id)).id == interaction.id
+
+
 async def test_manager_sees_everything(session, manager_user, kam_user):
     await _university_with_kam(session, kam_user, "Вуз КАМа")
     system = UniversityService(session, AccessScope.system())

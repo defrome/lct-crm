@@ -2,16 +2,20 @@
 
 from __future__ import annotations
 
+import asyncio
 import datetime as dt
+import email.message
+import smtplib
 import uuid
 from typing import Any, cast
 
+import httpx
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.access import AccessScope
 from app.core.config import settings
-from app.core.errors import ValidationError
+from app.core.errors import DuplicateEntityError, ValidationError
 from app.models.communications import (
     ChatMessage,
     EducationActivity,
@@ -23,7 +27,29 @@ from app.models.communications import (
 from app.models.interaction import Interaction
 from app.models.user import User
 from app.repositories.interaction import InteractionRepository
+from app.services.base import integrity_guard
 from app.services.text import clean_text
+
+
+def _send_email(
+    host: str,
+    port: int,
+    username: str | None,
+    password: str | None,
+    sender: str,
+    recipient: str,
+    body: str,
+    use_tls: bool,
+) -> None:
+    message = email.message.EmailMessage()
+    message["From"], message["To"], message["Subject"] = sender, recipient, "CRM уведомление"
+    message.set_content(body)
+    with smtplib.SMTP(host, port, timeout=15) as smtp:
+        if use_tls:
+            smtp.starttls()
+        if username:
+            smtp.login(username, password or "")
+        smtp.send_message(message)
 
 
 def _visible(
@@ -66,9 +92,44 @@ class CommunicationService:
             raise ValidationError("Для получателя-роля укажите recipient_role")
         if recipient == "user" and not data.get("recipient_user_id"):
             raise ValidationError("Для конкретного получателя укажите recipient_user_id")
+        duplicate_filters = [
+            NotificationRule.recipient_kind == recipient,
+            NotificationRule.recipient_role.is_not_distinct_from(data.get("recipient_role")),
+            NotificationRule.recipient_user_id.is_not_distinct_from(data.get("recipient_user_id")),
+            NotificationRule.channel == data.get("channel"),
+            NotificationRule.is_enabled.is_(True),
+            NotificationRule.deleted_at.is_(None),
+        ]
+        if transition_id is not None:
+            duplicate_filters.extend(
+                [
+                    NotificationRule.workflow_transition_id == transition_id,
+                    NotificationRule.stale_after_days.is_(None),
+                ]
+            )
+        else:
+            duplicate_filters.extend(
+                [
+                    NotificationRule.workflow_transition_id.is_(None),
+                    NotificationRule.stale_after_days == stale_days,
+                ]
+            )
+        duplicate = await self.session.scalar(
+            sa.select(NotificationRule.id).where(*duplicate_filters)
+        )
+        if duplicate is not None:
+            raise DuplicateEntityError(
+                "Такое правило уведомлений уже существует",
+                details={"rule_id": str(duplicate)},
+            )
         rule = NotificationRule(**data)
         self.session.add(rule)
-        await self.session.commit()
+        async with integrity_guard(
+            self.session,
+            duplicate_message="Такое правило уведомлений уже существует",
+        ):
+            await self.session.flush()
+            await self.session.commit()
         return rule
 
     async def enqueue_transition(self, interaction: Interaction, transition_id: uuid.UUID) -> None:
@@ -192,12 +253,58 @@ class CommunicationService:
         )
         for row in rows:
             row.attempts += 1
-            if row.channel == "email" or settings.feature_external_channels_enabled:
+            ok, error = await self._deliver(row)
+            if ok:
                 row.status, row.sent_at, row.error_message = "sent", dt.datetime.now(dt.UTC), None
             else:
-                row.status, row.error_message = "failed", "Внешний канал отключён feature flag"
+                row.status, row.error_message = "failed", error
         await self.session.commit()
         return len(rows)
+
+    async def _deliver(self, row: NotificationDelivery) -> tuple[bool, str | None]:
+        if not settings.feature_external_channels_enabled:
+            return False, "Внешние каналы отключены: включите FEATURE_EXTERNAL_CHANNELS_ENABLED"
+        event = str((row.payload or {}).get("event", "уведомление"))
+        message = f"CRM: {event} (карточка {row.interaction_id})"
+        if row.channel == "email":
+            if not settings.smtp_host or not settings.smtp_from:
+                return False, "Email не настроен: укажите SMTP_HOST и SMTP_FROM"
+            recipient_email = await self.session.scalar(
+                sa.select(User.email).where(
+                    User.id == row.recipient_user_id, User.deleted_at.is_(None)
+                )
+            )
+            if not recipient_email:
+                return False, "У получателя не указан рабочий email"
+            try:
+                await asyncio.to_thread(
+                    _send_email,
+                    settings.smtp_host,
+                    settings.smtp_port,
+                    settings.smtp_username,
+                    settings.smtp_password,
+                    settings.smtp_from,
+                    recipient_email,
+                    message,
+                    settings.smtp_use_tls,
+                )
+            except Exception as exc:  # pragma: no cover - external SMTP failure
+                return False, f"Ошибка SMTP: {exc}"
+            return True, None
+        if row.channel == "telegram":
+            if not settings.telegram_bot_token or not settings.telegram_chat_id:
+                return False, "Telegram не настроен: укажите TELEGRAM_BOT_TOKEN и TELEGRAM_CHAT_ID"
+            try:
+                async with httpx.AsyncClient(timeout=10) as client:
+                    response = await client.post(
+                        f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage",
+                        json={"chat_id": settings.telegram_chat_id, "text": message},
+                    )
+                    response.raise_for_status()
+            except Exception as exc:  # pragma: no cover - external Telegram failure
+                return False, f"Ошибка Telegram: {exc}"
+            return True, None
+        return False, "Канал MAX пока не подключён"
 
     async def deliveries(self, limit: int = 20) -> list[NotificationDelivery]:
         """Recent delivery attempts for the notification center."""

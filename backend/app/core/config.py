@@ -99,6 +99,14 @@ class Settings(BaseSettings):
     feature_chat_enabled: bool = False
     feature_cache_enabled: bool = False
     notifications_poll_seconds: int = 60
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_username: str | None = None
+    smtp_password: str | None = None
+    smtp_from: str | None = None
+    smtp_use_tls: bool = True
+    telegram_bot_token: str | None = None
+    telegram_chat_id: str | None = None
 
     # --- Attachments -------------------------------------------------------
     # Stage attachments (FR-04), stored in object storage.
@@ -146,6 +154,8 @@ class Settings(BaseSettings):
             raise ValueError("CACHE_TTL_SECONDS must be at least 1")
         if self.notifications_poll_seconds < 10:
             raise ValueError("NOTIFICATIONS_POLL_SECONDS must be at least 10")
+        if self.smtp_port < 1 or self.smtp_port > 65535:
+            raise ValueError("SMTP_PORT must be between 1 and 65535")
         return self
 
 
