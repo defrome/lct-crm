@@ -9,6 +9,7 @@ import { useToast } from '@/app/ToastProvider';
 import { IconButton } from '@/components/ui/Button';
 import { Button } from '@/components/ui/Button';
 import { Select, TextInput } from '@/components/ui/Field';
+import { ConfirmModal } from '@/components/ui/Modal';
 import { useDismiss } from '@/hooks';
 import { formatDateTime } from '@/lib/format';
 
@@ -38,6 +39,7 @@ export function NotificationCenter() {
     onError: (error) => toast.fail(error, 'Не удалось обработать уведомления'),
   });
   const [showRuleForm, setShowRuleForm] = useState(false);
+  const [ruleToRemove, setRuleToRemove] = useState<string | null>(null);
   const [days, setDays] = useState('14');
   const [channel, setChannel] = useState<'email' | 'telegram'>('email');
   const createRule = useMutation({
@@ -53,6 +55,15 @@ export function NotificationCenter() {
       toast.notify('Правило напоминаний сохранено');
     },
     onError: (error) => toast.fail(error, 'Не удалось сохранить правило'),
+  });
+  const removeRule = useMutation({
+    mutationFn: () => notificationsApi.removeRule(ruleToRemove!),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['notification-rules'] });
+      setRuleToRemove(null);
+      toast.notify('Правило уведомлений удалено');
+    },
+    onError: (error) => toast.fail(error, 'Не удалось удалить правило'),
   });
 
   return (
@@ -119,9 +130,24 @@ export function NotificationCenter() {
                 </button>
               </div>
               {rules.data?.length ? (
-                <p className="mt-1 text-desc text-fg-muted">
-                  Активных правил: {rules.data.filter((rule) => rule.is_enabled).length}
-                </p>
+                <ul className="mt-2 flex max-h-32 flex-col gap-1 overflow-y-auto">
+                  {rules.data.map((rule) => (
+                    <li key={rule.id} className="flex items-center justify-between gap-2 rounded-s bg-surface-3 px-2 py-1.5">
+                      <span className="min-w-0 text-desc text-fg-muted">
+                        {rule.stale_after_days
+                          ? `Напоминание через ${rule.stale_after_days} дн. (${CHANNEL_LABELS[rule.channel]})`
+                          : `Уведомление о переходе (${CHANNEL_LABELS[rule.channel]})`}
+                      </span>
+                      <IconButton
+                        icon="trash"
+                        label="Удалить правило"
+                        size="m"
+                        variant="ghost"
+                        onClick={() => setRuleToRemove(rule.id)}
+                      />
+                    </li>
+                  ))}
+                </ul>
               ) : null}
               {showRuleForm && (
                 <form
@@ -156,6 +182,16 @@ export function NotificationCenter() {
           )}
         </div>
       )}
+      <ConfirmModal
+        open={ruleToRemove !== null}
+        onClose={() => setRuleToRemove(null)}
+        onConfirm={() => removeRule.mutate()}
+        loading={removeRule.isPending}
+        danger
+        title="Удалить правило уведомлений?"
+        confirmLabel="Удалить"
+        message="Правило перестанет создавать новые уведомления. Уже созданные записи доставок останутся в журнале."
+      />
     </div>
   );
 }

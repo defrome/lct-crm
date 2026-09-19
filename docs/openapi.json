@@ -7254,6 +7254,43 @@
         }
       }
     },
+    "/api/v1/notification-rules/{rule_id}": {
+      "delete": {
+        "tags": [
+          "Коммуникации и обучение"
+        ],
+        "summary": "Удалить правило уведомлений",
+        "description": "Помечает правило удалённым: оно больше не создаёт новые уведомления, а журнал уже созданных доставок сохраняется. Доступно менеджеру.",
+        "operationId": "delete_rule_api_v1_notification_rules__rule_id__delete",
+        "parameters": [
+          {
+            "name": "rule_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Rule Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/notifications/run-stalled": {
       "post": {
         "tags": [

@@ -81,6 +81,25 @@ async def create_rule(
     )
 
 
+@router.delete(
+    "/notification-rules/{rule_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=None,
+    summary="Удалить правило уведомлений",
+    description=(
+        "Помечает правило удалённым: оно больше не создаёт новые уведомления, "
+        "а журнал уже созданных доставок сохраняется. Доступно менеджеру."
+    ),
+)
+async def delete_rule(
+    rule_id: uuid.UUID,
+    session: SessionDep,
+    scope: ScopeDep,
+    _: CurrentUser = Depends(require_manager),
+) -> None:
+    await CommunicationService(session, scope).delete_rule(rule_id)
+
+
 @router.post(
     "/notifications/run-stalled",
     summary="Проверить просроченные переходы",

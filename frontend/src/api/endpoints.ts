@@ -176,6 +176,7 @@ export const notificationsApi = {
   rules: () => api.get<NotificationRuleRead[]>('/notification-rules'),
   createRule: (body: NotificationRuleCreate) =>
     api.post<NotificationRuleRead>('/notification-rules', body),
+  removeRule: (id: string) => api.delete(`/notification-rules/${id}`),
 };
 
 export const attachmentsApi = {
