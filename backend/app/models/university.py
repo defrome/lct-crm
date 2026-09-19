@@ -116,7 +116,8 @@ class UniversityAssignment(DomainBase):
         sa.ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
     assigned_from: Mapped[dt.date] = mapped_column(sa.Date, nullable=False)
-    # NULL upper bound means "still in effect".
+    # NULL upper bound means "still in effect"; a non-NULL end date is
+    # exclusive, so a replacement may start on that same date.
     assigned_to: Mapped[dt.date | None] = mapped_column(sa.Date, default=None)
 
     university: Mapped[University] = relationship(back_populates="assignments", lazy="selectin")
@@ -134,7 +135,7 @@ class UniversityAssignment(DomainBase):
         # request cannot slip past the service check.
         ExcludeConstraint(
             (sa.literal_column("university_id"), "="),
-            (sa.literal_column("daterange(assigned_from, assigned_to, '[]')"), "&&"),
+            (sa.literal_column("daterange(assigned_from, assigned_to, '[)')"), "&&"),
             name="university_assignments_no_overlap",
             using="gist",
             where=sa.text("deleted_at IS NULL"),

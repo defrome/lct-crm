@@ -98,19 +98,21 @@ class UniversityAssignmentRepository(BaseRepository[UniversityAssignment]):
     ) -> UniversityAssignment | None:
         """Any live assignment of the same university whose period intersects.
 
-        Two closed/half-open ranges [a1, a2] and [b1, b2] (NULL = +infinity)
-        overlap iff a1 <= b2 and b1 <= a2.
+        ``assigned_to`` is the date on which responsibility ends, so periods
+        are half-open: ``[assigned_from, assigned_to)``.  This makes closing
+        one assignment today and starting its replacement today a valid
+        handoff, while still rejecting genuinely overlapping periods.
         """
         conditions = [
             UniversityAssignment.university_id == university_id,
             UniversityAssignment.deleted_at.is_(None),
             sa.or_(
                 UniversityAssignment.assigned_to.is_(None),
-                UniversityAssignment.assigned_to >= assigned_from,
+                UniversityAssignment.assigned_to > assigned_from,
             ),
         ]
         if assigned_to is not None:
-            conditions.append(UniversityAssignment.assigned_from <= assigned_to)
+            conditions.append(UniversityAssignment.assigned_from < assigned_to)
         if exclude_id is not None:
             conditions.append(UniversityAssignment.id != exclude_id)
         return await self.session.scalar(sa.select(UniversityAssignment).where(*conditions))

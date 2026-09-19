@@ -25,8 +25,9 @@ from app.models.user import UserVisibilityUniversity
 def visible_university_ids(scope: AccessScope) -> Select[tuple[uuid.UUID]]:
     """Universities the scope's user is currently assigned to.
 
-    "Currently" means today falls inside `[assigned_from, assigned_to]`, with a
-    NULL upper bound meaning "still in effect".
+    "Currently" means today falls inside `[assigned_from, assigned_to)`, with
+    a NULL upper bound meaning "still in effect".  The upper date is the day
+    the responsibility ends, so a replacement can start on that same day.
     """
     if scope.visibility_mode == "selected":
         return sa.select(UserVisibilityUniversity.university_id).where(
@@ -41,7 +42,7 @@ def visible_university_ids(scope: AccessScope) -> Select[tuple[uuid.UUID]]:
         UniversityAssignment.assigned_from <= today,
         sa.or_(
             UniversityAssignment.assigned_to.is_(None),
-            UniversityAssignment.assigned_to >= today,
+            UniversityAssignment.assigned_to > today,
         ),
     )
 

@@ -48,6 +48,25 @@ async def test_sequential_assignments_are_allowed(session, scope, kam_user, othe
     assert total == 2
 
 
+async def test_same_day_handoff_is_allowed_after_closing_assignment(
+    session, scope, kam_user, other_kam_user
+):
+    university = await UniversityService(session, scope).create(UniversityCreate(name="Вуз"))
+    service = AssignmentService(session, scope)
+    assignment = await service.create(
+        university.id,
+        AssignmentCreate(user_id=kam_user.id, assigned_from=dt.date(2026, 9, 1)),
+    )
+
+    closed = await service.close(assignment.id, closed_on=dt.date(2026, 9, 19))
+    replacement = await service.create(
+        university.id,
+        AssignmentCreate(user_id=other_kam_user.id, assigned_from=dt.date(2026, 9, 19)),
+    )
+
+    assert closed.assigned_to == replacement.assigned_from
+
+
 async def test_unknown_user_is_rejected(session, scope):
     import uuid
 

@@ -52,6 +52,7 @@ class AssignmentService:
             )
 
         # SPEC §4.2: one live assignment per university at any point in time.
+        # Periods use an exclusive end date, allowing a same-day handoff.
         # Checked here for a readable message; the GiST exclusion constraint on
         # the table is what actually guarantees it under concurrency.
         overlap = await self.repo.find_overlapping(
