@@ -6,7 +6,9 @@ from collections.abc import Sequence
 
 from alembic import op
 
-revision: str = "0010_notification_rule_uniqueness"
+# Alembic's default ``alembic_version.version_num`` column is VARCHAR(32).
+# Keep this identifier within that limit so a clean upgrade can record it.
+revision: str = "0010_notification_rule_unique"
 down_revision: str | None = "0009_communications_education"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
