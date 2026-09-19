@@ -94,6 +94,26 @@ async def create_user(
     return UserRead.model_validate(await UserService(session, scope).create(data))
 
 
+@router.delete(
+    "/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=None,
+    summary="Удалить сотрудника (мягкое удаление)",
+    description=(
+        "Только для роли `admin`. Запись скрывается из рабочих списков, "
+        "а связанные назначения и историю сохраняются."
+    ),
+    responses=CATALOG_ERRORS,
+)
+async def delete_user(
+    user_id: uuid.UUID,
+    session: SessionDep,
+    scope: ScopeDep,
+    _: CurrentUser = Depends(require_admin),
+) -> None:
+    await UserService(session, scope).delete(user_id)
+
+
 @router.get(
     "/{user_id}/visibility",
     response_model=UserVisibilityUpdate,

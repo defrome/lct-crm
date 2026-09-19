@@ -59,6 +59,12 @@ class UserService:
             await self.session.commit()
         return user
 
+    async def delete(self, user_id: uuid.UUID) -> None:
+        """Soft-delete an employee projection while preserving references/history."""
+        user = await self.repo.get_or_fail(user_id)
+        await self.repo.soft_delete(user)
+        await self.session.commit()
+
     async def update_visibility(self, user_id: uuid.UUID, data: UserVisibilityUpdate) -> User:
         """Replace a KAM's explicit visibility policy atomically.
 

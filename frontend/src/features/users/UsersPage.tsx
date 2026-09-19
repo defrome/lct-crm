@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/Button';
 import { DataTable, Pagination, type Column } from '@/components/ui/DataTable';
 import { Select, TextInput } from '@/components/ui/Field';
 import { FilterBar } from '@/components/ui/FilterBar';
-import { Modal } from '@/components/ui/Modal';
+import { ConfirmModal, Modal } from '@/components/ui/Modal';
 import { Blank, EmptyState, PageHeader } from '@/components/ui/States';
 import { useDebounced, useFilters } from '@/hooks';
 import { ROLE_HINTS, ROLE_LABELS, formatDate } from '@/lib/format';
@@ -29,6 +29,19 @@ export function UsersPage() {
   const search = useDebounced(values.q, 350);
   const [creating, setCreating] = useState(false);
   const [visibilityUser, setVisibilityUser] = useState<UserRead | null>(null);
+  const [deletingUser, setDeletingUser] = useState<UserRead | null>(null);
+  const toast = useToast();
+  const client = useQueryClient();
+
+  const remove = useMutation({
+    mutationFn: () => usersApi.remove(deletingUser!.id),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['users'] });
+      toast.notify('Сотрудник удалён');
+      setDeletingUser(null);
+    },
+    onError: (error) => toast.fail(error, 'Не удалось удалить сотрудника'),
+  });
 
   const { data, isPending, error, refetch } = useUsers({
     search: search || undefined,
@@ -63,14 +76,16 @@ export function UsersPage() {
     },
     {
       key: 'settings',
-      header: 'Управление доступом',
+      header: 'Действия',
       align: 'center',
-      render: (row) =>
-        can('admin') && row.role === 'user' ? (
-          <Button size="s" onClick={() => setVisibilityUser(row)}>
-            Доступ
-          </Button>
-        ) : null,
+      render: (row) => can('admin') ? (
+        <span className="flex justify-center gap-2">
+          {row.role === 'user' && (
+            <Button size="s" onClick={() => setVisibilityUser(row)}>Доступ</Button>
+          )}
+          <Button size="s" variant="danger" onClick={() => setDeletingUser(row)}>Удалить</Button>
+        </span>
+      ) : null,
     },
     {
       key: 'role',
@@ -187,6 +202,16 @@ export function UsersPage() {
 
       <UserFormModal open={creating} onClose={() => setCreating(false)} />
       <VisibilityModal key={visibilityUser?.id ?? 'none'} user={visibilityUser} onClose={() => setVisibilityUser(null)} />
+      <ConfirmModal
+        open={Boolean(deletingUser)}
+        onClose={() => setDeletingUser(null)}
+        onConfirm={() => remove.mutate()}
+        loading={remove.isPending}
+        title="Удалить сотрудника?"
+        message={deletingUser ? `«${deletingUser.full_name}» будет скрыт из списка сотрудников. Связанные данные и история сохранятся.` : ''}
+        confirmLabel="Удалить"
+        danger
+      />
     </Page>
   );
 }

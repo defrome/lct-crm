@@ -74,6 +74,7 @@ export const usersApi = {
   list: (params?: PageQuery) => api.get<Page<UserRead>>('/users', q(params)),
   get: (id: UUID) => api.get<UserRead>(`/users/${id}`),
   create: (body: UserCreate) => api.post<UserRead>('/users', body),
+  remove: (id: UUID) => api.delete(`/users/${id}`),
   visibility: (id: UUID) => api.get<UserVisibilityUpdate>(`/users/${id}/visibility`),
   updateVisibility: (id: UUID, body: UserVisibilityUpdate) =>
     api.patch<UserRead>(`/users/${id}/visibility`, body),
