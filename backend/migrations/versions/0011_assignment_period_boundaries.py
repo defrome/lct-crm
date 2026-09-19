@@ -18,10 +18,9 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    op.drop_constraint(
-        "university_assignments_no_overlap",
-        table_name="university_assignments",
-        type_="exclude",
+    op.execute(
+        "ALTER TABLE university_assignments "
+        "DROP CONSTRAINT university_assignments_no_overlap"
     )
     op.create_exclude_constraint(
         "university_assignments_no_overlap",
@@ -34,10 +33,9 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_constraint(
-        "university_assignments_no_overlap",
-        table_name="university_assignments",
-        type_="exclude",
+    op.execute(
+        "ALTER TABLE university_assignments "
+        "DROP CONSTRAINT university_assignments_no_overlap"
     )
     op.create_exclude_constraint(
         "university_assignments_no_overlap",
