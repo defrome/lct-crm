@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import AsyncIterator
 
+import asyncpg
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.audit import register_audit_listeners
@@ -12,6 +16,8 @@ from app.core.config import settings
 # Importing the models package registers every table on the shared MetaData and
 # is also what makes the audit listeners meaningful.
 import app.models  # noqa: F401  isort:skip
+
+logger = logging.getLogger(__name__)
 
 engine = create_async_engine(
     settings.database_url,
@@ -51,3 +57,14 @@ async def get_session() -> AsyncIterator[AsyncSession]:
 
 async def dispose_engine() -> None:
     await engine.dispose()
+
+
+async def database_is_available() -> bool:
+    """Return whether PostgreSQL can accept and execute a query right now."""
+    try:
+        async with engine.connect() as connection:
+            await connection.execute(text("SELECT 1"))
+    except (OSError, asyncpg.PostgresError, SQLAlchemyError) as exc:
+        logger.warning("database readiness check failed: %s", exc)
+        return False
+    return True

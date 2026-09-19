@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 
+from app import main
 from app.core.access import AccessScope
 from app.core.config import settings
 from app.schemas.university import UniversityCreate
@@ -103,6 +104,18 @@ async def test_health_endpoint(client):
     response = await client.get("/health")
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
+
+
+async def test_health_endpoint_is_unhealthy_while_database_is_recovering(client, monkeypatch):
+    async def database_is_recovering() -> bool:
+        return False
+
+    monkeypatch.setattr(main, "database_is_available", database_is_recovering)
+
+    response = await client.get("/health")
+
+    assert response.status_code == 503
+    assert response.json()["status"] == "unavailable"
 
 
 async def test_metrics_endpoint_exposes_prometheus_metrics(client):

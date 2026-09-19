@@ -21,7 +21,7 @@ from starlette.responses import Response
 from app.api.v1.router import api_router
 from app.core.audit import AuditContext, audit_context
 from app.core.config import settings
-from app.core.db import dispose_engine
+from app.core.db import database_is_available, dispose_engine
 from app.core.errors import AppError, ErrorCode, error_payload
 from app.core.logging import configure_logging
 from app.services.cache import get_response_cache
@@ -323,9 +323,16 @@ def _safe_errors(errors: Sequence[Any]) -> list[dict[str, Any]]:
     "/health",
     tags=["Служебное"],
     summary="Проверка живости сервиса",
-    description='Возвращает `{"status": "ok"}`, если процесс обслуживает запросы.',
+    description='Возвращает `{"status": "ok"}`, когда API и PostgreSQL готовы принимать запросы.',
+    responses={503: {"description": "PostgreSQL временно недоступен"}},
+    response_model=None,
 )
-async def health() -> dict[str, str]:
+async def health() -> dict[str, str] | JSONResponse:
+    if not await database_is_available():
+        return JSONResponse(
+            status_code=503,
+            content={"status": "unavailable", "env": settings.env},
+        )
     return {"status": "ok", "env": settings.env}
 
 
