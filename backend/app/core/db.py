@@ -59,12 +59,13 @@ async def dispose_engine() -> None:
     await engine.dispose()
 
 
-async def database_is_available() -> bool:
+async def database_is_available(*, log_failure: bool = True) -> bool:
     """Return whether PostgreSQL can accept and execute a query right now."""
     try:
         async with engine.connect() as connection:
             await connection.execute(text("SELECT 1"))
     except (OSError, asyncpg.PostgresError, SQLAlchemyError) as exc:
-        logger.warning("database readiness check failed: %s", exc)
+        if log_failure:
+            logger.warning("database readiness check failed: %s", exc)
         return False
     return True

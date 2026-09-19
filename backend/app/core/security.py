@@ -24,7 +24,7 @@ from typing import Any, Literal
 import httpx
 from fastapi import Depends, Request
 from jose import jwt
-from jose.exceptions import JWTError
+from jose.exceptions import JWTClaimsError, JWTError
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -69,9 +69,9 @@ class _JWKSCache:
         self._value: dict[str, Any] | None = None
         self._fetched_at: float = 0.0
 
-    async def get(self, url: str) -> dict[str, Any]:
+    async def get(self, url: str, *, force_refresh: bool = False) -> dict[str, Any]:
         now = time.monotonic()
-        if self._value is not None and now - self._fetched_at < self._ttl:
+        if not force_refresh and self._value is not None and now - self._fetched_at < self._ttl:
             return self._value
         async with httpx.AsyncClient(timeout=5.0) as client:
             response = await client.get(url)
@@ -104,13 +104,29 @@ async def _decode_keycloak_token(token: str) -> dict[str, Any]:
         audience = None
     try:
         jwks = await _jwks_cache.get(settings.keycloak_jwks_url)
-        claims: dict[str, Any] = jwt.decode(
-            token,
-            jwks,
-            audience=audience,
-            issuer=settings.keycloak_issuer,
-            options={"verify_aud": audience is not None},
-        )
+        try:
+            claims: dict[str, Any] = jwt.decode(
+                token,
+                jwks,
+                audience=audience,
+                issuer=settings.keycloak_issuer,
+                options={"verify_aud": audience is not None},
+            )
+        except JWTError as exc:
+            # Keycloak can rotate its signing key while an API replica still
+            # has the previous JWKS document cached. Refresh once before
+            # rejecting the request; issuer/audience errors still fail on the
+            # second attempt and are never weakened by this retry.
+            if isinstance(exc, JWTClaimsError):
+                raise
+            jwks = await _jwks_cache.get(settings.keycloak_jwks_url, force_refresh=True)
+            claims = jwt.decode(
+                token,
+                jwks,
+                audience=audience,
+                issuer=settings.keycloak_issuer,
+                options={"verify_aud": audience is not None},
+            )
     except (JWTError, httpx.HTTPError) as exc:
         logger.warning("token verification failed: %s", exc)
         raise AuthenticationError("Токен доступа недействителен") from None
