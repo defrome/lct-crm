@@ -181,6 +181,7 @@ async def message(
     response_model=ChatMessageRead,
     status_code=status.HTTP_201_CREATED,
     summary="Добавить сообщение с вложениями",
+    description="Создаёт сообщение для указанного взаимодействия и прикрепляет к нему загруженные файлы.",
 )
 async def message_with_attachments(
     interaction_id: uuid.UUID,
@@ -199,7 +200,12 @@ async def message_with_attachments(
     return ChatMessageRead.model_validate(message)
 
 
-@router.get("/chat-attachments/{attachment_id}/download", response_class=Response)
+@router.get(
+    "/chat-attachments/{attachment_id}/download",
+    response_class=Response,
+    summary="Скачать вложение чата",
+    description="Возвращает содержимое вложения, доступного пользователю в рамках его области видимости.",
+)
 async def download_chat_attachment(
     attachment_id: uuid.UUID, session: SessionDep, scope: ScopeDep
 ) -> Response:
