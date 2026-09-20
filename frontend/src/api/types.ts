@@ -258,10 +258,21 @@ export interface ChatMessageRead {
   author: UserShort;
   body: string;
   created_at: DateTime;
+  attachments: ChatAttachmentRead[];
 }
 
 export interface ChatMessageCreate {
   body: string;
+}
+
+export interface ChatAttachmentRead {
+  id: UUID;
+  message_id: UUID;
+  filename: string;
+  file_format: AttachmentFormat;
+  content_type: string;
+  size_bytes: number;
+  created_at: DateTime;
 }
 
 export interface NotificationDeliveryRead {

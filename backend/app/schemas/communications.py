@@ -5,6 +5,7 @@ import uuid
 
 from pydantic import BaseModel, Field
 
+from app.models.enums import AttachmentFormat
 from app.schemas.common import ORMModel
 from app.schemas.user import UserShort
 
@@ -39,6 +40,16 @@ class ChatMessageCreate(BaseModel):
     body: str = Field(min_length=1, max_length=5000)
 
 
+class ChatAttachmentRead(ORMModel):
+    id: uuid.UUID
+    message_id: uuid.UUID
+    filename: str
+    file_format: AttachmentFormat
+    content_type: str
+    size_bytes: int
+    created_at: dt.datetime
+
+
 class ChatMessageRead(ORMModel):
     id: uuid.UUID
     interaction_id: uuid.UUID
@@ -46,6 +57,7 @@ class ChatMessageRead(ORMModel):
     author: UserShort
     body: str
     created_at: dt.datetime
+    attachments: list[ChatAttachmentRead] = Field(default_factory=list)
 
 
 class ParticipantCreate(BaseModel):

@@ -5,8 +5,10 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import uuid
+from typing import Annotated
+from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, File, Form, Response, UploadFile, status
 
 from app.api.v1.deps import CurrentUserDep, ScopeDep, SessionDep
 from app.core.config import settings
@@ -171,6 +173,45 @@ async def message(
 ) -> ChatMessageRead:
     return ChatMessageRead.model_validate(
         await CommunicationService(session, scope).post_message(interaction_id, user.id, data.body)
+    )
+
+
+@router.post(
+    "/interactions/{interaction_id}/messages/with-attachments",
+    response_model=ChatMessageRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Добавить сообщение с вложениями",
+)
+async def message_with_attachments(
+    interaction_id: uuid.UUID,
+    session: SessionDep,
+    scope: ScopeDep,
+    user: CurrentUserDep,
+    files: Annotated[list[UploadFile], File(description="До 10 файлов")],
+    body: Annotated[str, Form()] = "",
+) -> ChatMessageRead:
+    message = await CommunicationService(session, scope).post_message_with_attachments(
+        interaction_id,
+        user.id,
+        body,
+        [(file.filename or "file", await file.read()) for file in files],
+    )
+    return ChatMessageRead.model_validate(message)
+
+
+@router.get("/chat-attachments/{attachment_id}/download", response_class=Response)
+async def download_chat_attachment(
+    attachment_id: uuid.UUID, session: SessionDep, scope: ScopeDep
+) -> Response:
+    attachment, data = await CommunicationService(session, scope).download_chat_attachment(
+        attachment_id
+    )
+    return Response(
+        content=data,
+        media_type=attachment.content_type,
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{quote(attachment.filename)}"
+        },
     )
 
 

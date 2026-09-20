@@ -3,6 +3,7 @@
 from app.models.audit_log import AuditLog
 from app.models.base import Base, DomainBase
 from app.models.communications import (
+    ChatAttachment,
     ChatMessage,
     EducationActivity,
     EducationActivityParticipant,
@@ -44,6 +45,7 @@ __all__ = [
     "AuditAction",
     "AuditLog",
     "Base",
+    "ChatAttachment",
     "ChatMessage",
     "DomainBase",
     "EducationActivity",

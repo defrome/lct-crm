@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import datetime as dt
 import email.message
+import hashlib
 import smtplib
 import ssl
 import uuid
@@ -16,8 +17,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.access import AccessScope
 from app.core.config import settings
-from app.core.errors import DuplicateEntityError, NotFoundError, ValidationError
+from app.core.errors import (
+    AttachmentTooLargeError,
+    DuplicateEntityError,
+    NotFoundError,
+    ValidationError,
+)
 from app.models.communications import (
+    ChatAttachment,
     ChatMessage,
     EducationActivity,
     EducationActivityParticipant,
@@ -25,10 +32,14 @@ from app.models.communications import (
     NotificationDelivery,
     NotificationRule,
 )
+from app.models.enums import AttachmentFormat
 from app.models.interaction import Interaction
 from app.models.user import User
 from app.repositories.interaction import InteractionRepository
+from app.services.audit import log_export
 from app.services.base import integrity_guard
+from app.services.file_types import detect_attachment_format
+from app.services.object_storage import ObjectStorage, get_object_storage
 from app.services.text import clean_text
 
 
@@ -371,6 +382,101 @@ class CommunicationService:
         self.session.add(message)
         await self.session.commit()
         return await self.session.scalar(sa.select(ChatMessage).where(ChatMessage.id == message.id))  # type: ignore[return-value]
+
+    async def post_message_with_attachments(
+        self,
+        interaction_id: uuid.UUID,
+        author_id: uuid.UUID,
+        body: str,
+        files: list[tuple[str, bytes]],
+        *,
+        storage: ObjectStorage | None = None,
+    ) -> ChatMessage:
+        """Create one message and its files as a single database operation."""
+        interaction = await self.interactions.get_or_fail(interaction_id)
+        if not settings.feature_chat_enabled:
+            raise ValidationError("Чат отключён feature flag")
+        cleaned_body = clean_text(body) or ""
+        if not cleaned_body and not files:
+            raise ValidationError("Добавьте текст сообщения или хотя бы один файл")
+        if len(files) > 10:
+            raise ValidationError("К одному сообщению можно приложить не больше 10 файлов")
+
+        prepared: list[tuple[str, bytes, AttachmentFormat, str]] = []
+        for filename, content in files:
+            if len(content) > settings.attachment_max_file_size:
+                raise AttachmentTooLargeError(
+                    "Размер файла превышает допустимый предел",
+                    details={"filename": filename, "max_size": settings.attachment_max_file_size},
+                )
+            cleaned_name = clean_text(filename) or "file"
+            file_format, content_type = detect_attachment_format(content, cleaned_name)
+            prepared.append((cleaned_name, content, file_format, content_type))
+
+        message = ChatMessage(
+            interaction_id=interaction.id,
+            university_id=interaction.university_id,
+            author_id=author_id,
+            body=cleaned_body,
+        )
+        self.session.add(message)
+        await self.session.flush()
+        attachments: list[tuple[ChatAttachment, bytes]] = []
+        for filename, content, file_format, content_type in prepared:
+            attachment = ChatAttachment(
+                message_id=message.id,
+                interaction_id=interaction.id,
+                university_id=interaction.university_id,
+                filename=filename,
+                file_format=file_format,
+                content_type=content_type,
+                size_bytes=len(content),
+                file_hash=hashlib.sha256(content).hexdigest(),
+            )
+            self.session.add(attachment)
+            await self.session.flush()
+            attachment.storage_key = f"chat-attachments/{attachment.id}"
+            attachments.append((attachment, content))
+
+        object_storage = storage or get_object_storage()
+        written_keys: list[str] = []
+        try:
+            for attachment, content in attachments:
+                assert attachment.storage_key is not None
+                await object_storage.put(attachment.storage_key, content, attachment.content_type)
+                written_keys.append(attachment.storage_key)
+            await self.session.commit()
+        except Exception:
+            await self.session.rollback()
+            for key in written_keys:
+                await object_storage.delete(key)
+            raise
+        return await self.session.scalar(sa.select(ChatMessage).where(ChatMessage.id == message.id))  # type: ignore[return-value]
+
+    async def download_chat_attachment(
+        self, attachment_id: uuid.UUID, *, storage: ObjectStorage | None = None
+    ) -> tuple[ChatAttachment, bytes]:
+        attachment = await self.session.scalar(
+            sa.select(ChatAttachment).where(
+                ChatAttachment.id == attachment_id, ChatAttachment.deleted_at.is_(None)
+            )
+        )
+        if attachment is None:
+            raise NotFoundError()
+        # This is deliberately the same visibility check as reading the message list.
+        await self.interactions.get_or_fail(attachment.interaction_id)
+        data = await (storage or get_object_storage()).get(attachment.storage_key or "")
+        if data is None:
+            raise NotFoundError("Содержимое файла не найдено")
+        await log_export(
+            self.session,
+            entity_type="chat_attachments",
+            entity_id=attachment.id,
+            filename=attachment.filename,
+            size=attachment.size_bytes,
+        )
+        await self.session.commit()
+        return attachment, data
 
 
 class EducationService:

@@ -11,6 +11,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import DomainBase
+from app.models.enums import ATTACHMENT_FORMAT_ENUM, AttachmentFormat
 
 
 class NotificationRule(DomainBase):
@@ -100,9 +101,47 @@ class ChatMessage(DomainBase):
     )
     body: Mapped[str] = mapped_column(sa.Text, nullable=False)
     author = relationship("User", lazy="selectin")
+    attachments: Mapped[list[ChatAttachment]] = relationship(lazy="selectin")
 
     __table_args__ = (
         sa.Index("ix_chat_messages_interaction_created", "interaction_id", "created_at"),
+    )
+
+
+class ChatAttachment(DomainBase):
+    """A document attached to a chat message, stored outside PostgreSQL."""
+
+    __tablename__ = "chat_attachments"
+
+    message_id: Mapped[uuid.UUID] = mapped_column(
+        sa.ForeignKey("chat_messages.id", ondelete="RESTRICT"), nullable=False
+    )
+    interaction_id: Mapped[uuid.UUID] = mapped_column(
+        sa.ForeignKey("interactions.id", ondelete="RESTRICT"), nullable=False
+    )
+    university_id: Mapped[uuid.UUID] = mapped_column(
+        sa.ForeignKey("universities.id", ondelete="RESTRICT"), nullable=False
+    )
+    filename: Mapped[str] = mapped_column(sa.Text, nullable=False)
+    file_format: Mapped[AttachmentFormat] = mapped_column(
+        sa.Enum(
+            AttachmentFormat,
+            name=ATTACHMENT_FORMAT_ENUM,
+            values_callable=lambda e: [member.value for member in e],
+        ),
+        nullable=False,
+    )
+    content_type: Mapped[str] = mapped_column(sa.Text, nullable=False)
+    size_bytes: Mapped[int] = mapped_column(sa.BigInteger, nullable=False)
+    file_hash: Mapped[str] = mapped_column(sa.Text, nullable=False)
+    storage_key: Mapped[str | None] = mapped_column(sa.Text, default=None)
+
+    message: Mapped[ChatMessage] = relationship(lazy="selectin")
+
+    __table_args__ = (
+        sa.Index("ix_chat_attachments_message", "message_id"),
+        sa.Index("ix_chat_attachments_interaction", "interaction_id"),
+        sa.Index("ix_chat_attachments_university", "university_id"),
     )
 
 

@@ -160,7 +160,12 @@ export const interactionsApi = {
   messages: (id: UUID) => api.get<ChatMessageRead[]>(`/interactions/${id}/messages`),
   sendMessage: (id: UUID, body: ChatMessageCreate) =>
     api.post<ChatMessageRead>(`/interactions/${id}/messages`, body),
-
+  sendMessageWithAttachments: (id: UUID, body: string, files: File[]) => {
+    const form = new FormData();
+    form.append('body', body);
+    files.forEach((file) => form.append('files', file));
+    return api.upload<ChatMessageRead>(`/interactions/${id}/messages/with-attachments`, form);
+  },
   attachments: (id: UUID, params?: PageQuery & { stage_id?: UUID }) =>
     api.get<Page<AttachmentRead>>(`/interactions/${id}/attachments`, q(params)),
   attach: (id: UUID, stageId: UUID, file: File, comment?: string) => {
@@ -225,6 +230,10 @@ export const stagesApi = {
   deletePreview: (id: UUID) => api.get<StageDeletePreview>(`/workflow-stages/${id}/delete-preview`),
   remove: (id: UUID, body: StageDeleteRequest) =>
     api.deleteWithBody(`/workflow-stages/${id}`, body),
+};
+
+export const chatAttachmentsApi = {
+  download: (id: UUID) => api.download(`/chat-attachments/${id}/download`),
 };
 
 export const transitionsApi = {
