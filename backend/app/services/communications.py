@@ -34,7 +34,10 @@ from app.models.communications import (
 )
 from app.models.enums import AttachmentFormat
 from app.models.interaction import Interaction
+from app.models.product import ITDirection, ITProduct
+from app.models.university import University
 from app.models.user import User
+from app.models.workflow import WorkflowStage
 from app.repositories.interaction import InteractionRepository
 from app.services.audit import log_export
 from app.services.base import integrity_guard
@@ -225,9 +228,85 @@ class CommunicationService:
                         recipient_user_id=recipient_id,
                         channel=rule.channel,
                         dedupe_key=key,
-                        payload={"event": event, "interaction_id": str(interaction.id)},
+                        payload={
+                            "event": event,
+                            "interaction_id": str(interaction.id),
+                            "card": await self._card_snapshot(interaction.id),
+                            "stale_after_days": rule.stale_after_days,
+                        },
                     )
                 )
+
+    async def _card_snapshot(self, interaction_id: uuid.UUID) -> dict[str, str | None]:
+        """Capture card names for a notification instead of exposing internal UUIDs."""
+        row = await self.session.execute(
+            sa.select(
+                University.name,
+                ITDirection.name,
+                ITProduct.name,
+                User.full_name,
+                WorkflowStage.name,
+            )
+            .select_from(Interaction)
+            .join(University, Interaction.university_id == University.id)
+            .outerjoin(ITDirection, Interaction.it_direction_id == ITDirection.id)
+            .outerjoin(ITProduct, Interaction.it_product_id == ITProduct.id)
+            .outerjoin(User, Interaction.responsible_user_id == User.id)
+            .outerjoin(WorkflowStage, Interaction.current_stage_id == WorkflowStage.id)
+            .where(Interaction.id == interaction_id)
+        )
+        card = row.one_or_none()
+        if card is None:
+            return {}
+        return {
+            "university": card[0],
+            "direction": card[1],
+            "product": card[2],
+            "responsible": card[3],
+            "stage": card[4],
+        }
+
+    async def _notification_message(self, row: NotificationDelivery) -> str:
+        payload = row.payload or {}
+        event = str(payload.get("event", "notification"))
+        card = payload.get("card")
+        # Deliveries already queued before this format was added also receive
+        # readable text if they are retried.
+        if not isinstance(card, dict):
+            card = await self._card_snapshot(row.interaction_id)
+
+        def value(key: str, fallback: str = "не указано") -> str:
+            item = card.get(key) if isinstance(card, dict) else None
+            return str(item) if item else fallback
+
+        if event.startswith("stalled:"):
+            days = payload.get("stale_after_days")
+            headline = (
+                f"Карточка не менялась более {days} дн."
+                if isinstance(days, int)
+                else "Карточка давно не менялась."
+            )
+            title = "CRM — напоминание"
+        elif event.startswith("transition:"):
+            headline = f"Карточка переведена на этап «{value('stage')}»."
+            title = "CRM — изменение карточки"
+        else:
+            headline = "Есть обновление по карточке."
+            title = "CRM — уведомление"
+
+        lines = [
+            title,
+            "",
+            headline,
+            f"Вуз: {value('university')}",
+            f"Направление: {value('direction')}",
+            f"Продукт: {value('product')}",
+            f"Текущий этап: {value('stage')}",
+        ]
+        responsible = value("responsible", "")
+        if responsible:
+            lines.append(f"Ответственный: {responsible}")
+        return "\n".join(lines)
 
     async def check_stalled(self, now: dt.datetime | None = None) -> int:
         if not settings.feature_notifications_enabled:
@@ -295,6 +374,7 @@ class CommunicationService:
             return False, "Внешние каналы отключены: включите FEATURE_EXTERNAL_CHANNELS_ENABLED"
         event = str((row.payload or {}).get("event", "уведомление"))
         message = f"CRM: {event} (карточка {row.interaction_id})"
+        message = await self._notification_message(row) or message
         if row.channel == "email":
             if not settings.smtp_host or not settings.smtp_from:
                 return False, "Email не настроен: укажите SMTP_HOST и SMTP_FROM"
@@ -351,6 +431,24 @@ class CommunicationService:
                 )
             ).all()
         )
+
+    async def mark_delivery_read(self, delivery_id: uuid.UUID) -> None:
+        """Hide one notification from the current user's notification center."""
+        row = await self.session.scalar(
+            sa.select(NotificationDelivery).where(
+                NotificationDelivery.id == delivery_id,
+                NotificationDelivery.deleted_at.is_(None),
+                _visible(self.scope, NotificationDelivery),
+                sa.or_(
+                    NotificationDelivery.recipient_user_id == self.scope.user_id,
+                    NotificationDelivery.recipient_user_id.is_(None),
+                ),
+            )
+        )
+        if row is None:
+            raise NotFoundError("Уведомление не найдено")
+        row.deleted_at = dt.datetime.now(dt.UTC)
+        await self.session.commit()
 
     async def messages(self, interaction_id: uuid.UUID) -> list[ChatMessage]:
         await self.interactions.get_or_fail(interaction_id)

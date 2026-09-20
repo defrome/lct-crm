@@ -178,6 +178,7 @@ export const interactionsApi = {
 
 export const notificationsApi = {
   list: () => api.get<NotificationDeliveryRead[]>('/notifications'),
+  markRead: (id: string) => api.post(`/notifications/${id}/read`),
   deliver: () => api.post<{ processed: number }>('/notifications/deliver'),
   rules: () => api.get<NotificationRuleRead[]>('/notification-rules'),
   createRule: (body: NotificationRuleCreate) =>

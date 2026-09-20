@@ -38,6 +38,13 @@ export function NotificationCenter() {
     },
     onError: (error) => toast.fail(error, 'Не удалось обработать уведомления'),
   });
+  const markRead = useMutation({
+    mutationFn: notificationsApi.markRead,
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['notifications'] });
+    },
+    onError: (error) => toast.fail(error, 'Не удалось отметить уведомление прочитанным'),
+  });
   const [showRuleForm, setShowRuleForm] = useState(false);
   const [ruleToRemove, setRuleToRemove] = useState<string | null>(null);
   const [days, setDays] = useState('14');
@@ -111,6 +118,18 @@ export function NotificationCenter() {
                     Попыток: {item.attempts} · {formatDateTime(item.created_at)}
                   </p>
                   {item.error_message && <p className="mt-1 text-desc text-error">{item.error_message}</p>}
+                  <div className="mt-2 flex justify-end">
+                    <Button
+                      type="button"
+                      size="s"
+                      variant="ghost"
+                      loading={markRead.isPending && markRead.variables === item.id}
+                      disabled={markRead.isPending}
+                      onClick={() => markRead.mutate(item.id)}
+                    >
+                      Прочитано
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>

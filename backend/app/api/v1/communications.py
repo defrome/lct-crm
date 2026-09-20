@@ -142,6 +142,19 @@ async def notification_deliveries(
     ]
 
 
+@router.post(
+    "/notifications/{notification_id}/read",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=None,
+    summary="Отметить уведомление прочитанным",
+    description="Скрывает уведомление из списка текущего пользователя.",
+)
+async def mark_notification_read(
+    notification_id: uuid.UUID, session: SessionDep, scope: ScopeDep
+) -> None:
+    await CommunicationService(session, scope).mark_delivery_read(notification_id)
+
+
 @router.get(
     "/interactions/{interaction_id}/messages",
     response_model=list[ChatMessageRead],
