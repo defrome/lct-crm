@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<archimate:model xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:archimate="http://www.archimatetool.com/archimate" name="CRM ИТ Школы" id="id-crm-it-school" version="5.0.0">
+  <folder name="Business" id="id-business" type="business">
+    <element xsi:type="archimate:BusinessActor" name="Сотрудник ИТ Школы" id="id-user"/>
+    <element xsi:type="archimate:BusinessProcess" name="Ведение взаимодействия с вузом" id="id-workflow"/>
+    <element xsi:type="archimate:BusinessProcess" name="Импорт и отчётность" id="id-reporting"/>
+  </folder>
+  <folder name="Application" id="id-application" type="application">
+    <element xsi:type="archimate:ApplicationComponent" name="React SPA" id="id-spa"/>
+    <element xsi:type="archimate:ApplicationComponent" name="FastAPI CRM API" id="id-api"/>
+    <element xsi:type="archimate:ApplicationComponent" name="Workflow и сервисы домена" id="id-services"/>
+    <element xsi:type="archimate:ApplicationComponent" name="Аутентификация Keycloak" id="id-keycloak"/>
+    <element xsi:type="archimate:ApplicationComponent" name="Интеграции и уведомления" id="id-integrations"/>
+  </folder>
+  <folder name="Technology" id="id-technology" type="technology">
+    <element xsi:type="archimate:Node" name="Nginx" id="id-nginx"/>
+    <element xsi:type="archimate:Node" name="PostgreSQL" id="id-postgres"/>
+    <element xsi:type="archimate:Node" name="MinIO" id="id-minio"/>
+    <element xsi:type="archimate:Node" name="Redis" id="id-redis"/>
+    <element xsi:type="archimate:Node" name="LMS / CMS / внешние каналы" id="id-external"/>
+  </folder>
+  <folder name="Relations" id="id-relations" type="relations">
+    <element xsi:type="archimate:ServingRelationship" source="id-spa" target="id-user" name="предоставляет интерфейс" id="id-r-spa-user"/>
+    <element xsi:type="archimate:ServingRelationship" source="id-api" target="id-spa" name="REST API" id="id-r-api-spa"/>
+    <element xsi:type="archimate:ServingRelationship" source="id-services" target="id-api" name="правила домена" id="id-r-services-api"/>
+    <element xsi:type="archimate:ServingRelationship" source="id-keycloak" target="id-api" name="JWT и JWKS" id="id-r-keycloak-api"/>
+    <element xsi:type="archimate:AccessRelationship" source="id-api" target="id-postgres" name="предметные данные и аудит" id="id-r-api-db"/>
+    <element xsi:type="archimate:AccessRelationship" source="id-api" target="id-minio" name="вложения" id="id-r-api-minio"/>
+    <element xsi:type="archimate:AccessRelationship" source="id-api" target="id-redis" name="кэш каталогов" id="id-r-api-redis"/>
+    <element xsi:type="archimate:FlowRelationship" source="id-integrations" target="id-external" name="интеграции и доставка" id="id-r-integrations-external"/>
+  </folder>
+  <folder name="Views" id="id-views" type="diagrams">
+    <element xsi:type="archimate:ArchimateDiagramModel" name="Компоненты CRM" id="id-view-components">
+      <child xsi:type="archimate:DiagramObject" id="id-view-spa" archimateElement="id-spa"><bounds x="40" y="80" width="180" height="55"/></child>
+      <child xsi:type="archimate:DiagramObject" id="id-view-api" archimateElement="id-api"><bounds x="300" y="80" width="180" height="55"/></child>
+      <child xsi:type="archimate:DiagramObject" id="id-view-services" archimateElement="id-services"><bounds x="560" y="80" width="200" height="55"/></child>
+      <child xsi:type="archimate:DiagramObject" id="id-view-postgres" archimateElement="id-postgres"><bounds x="300" y="210" width="140" height="55"/></child>
+      <child xsi:type="archimate:DiagramObject" id="id-view-minio" archimateElement="id-minio"><bounds x="480" y="210" width="120" height="55"/></child>
+      <child xsi:type="archimate:DiagramObject" id="id-view-keycloak" archimateElement="id-keycloak"><bounds x="40" y="210" width="180" height="55"/></child>
+      <sourceConnection xsi:type="archimate:DiagramModelArchimateConnection" id="id-conn-api-spa" source="id-view-api" target="id-view-spa" archimateRelationship="id-r-api-spa"/>
+      <sourceConnection xsi:type="archimate:DiagramModelArchimateConnection" id="id-conn-services-api" source="id-view-services" target="id-view-api" archimateRelationship="id-r-services-api"/>
+      <sourceConnection xsi:type="archimate:DiagramModelArchimateConnection" id="id-conn-db" source="id-view-api" target="id-view-postgres" archimateRelationship="id-r-api-db"/>
+      <sourceConnection xsi:type="archimate:DiagramModelArchimateConnection" id="id-conn-minio" source="id-view-api" target="id-view-minio" archimateRelationship="id-r-api-minio"/>
+      <sourceConnection xsi:type="archimate:DiagramModelArchimateConnection" id="id-conn-keycloak" source="id-view-keycloak" target="id-view-api" archimateRelationship="id-r-keycloak-api"/>
+    </element>
+  </folder>
+</archimate:model>

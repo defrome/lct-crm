@@ -40,6 +40,7 @@ const TOOL_NAV: NavItem[] = [
   { to: '/imports', label: 'Импорт', icon: 'import', role: 'manager' },
   { to: '/users', label: 'Сотрудники', icon: 'users', role: 'manager' },
   { to: '/audit', label: 'Журнал аудита', icon: 'audit', role: 'admin' },
+  { to: '/help', label: 'Помощь', icon: 'info' },
 ];
 
 export function AppShell() {

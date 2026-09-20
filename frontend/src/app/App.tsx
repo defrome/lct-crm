@@ -60,6 +60,9 @@ const UsersPage = lazy(() =>
 const AuditPage = lazy(() =>
   import('@/features/audit/AuditPage').then((m) => ({ default: m.AuditPage })),
 );
+const HelpPage = lazy(() =>
+  import('@/features/help/HelpPage').then((m) => ({ default: m.HelpPage })),
+);
 
 export function App() {
   return (
@@ -163,6 +166,7 @@ function Gate() {
             </RequireRole>
           }
         />
+        <Route path="help" element={<HelpPage />} />
 
         <Route path="*" element={<NotFound />} />
       </Route>
