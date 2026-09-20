@@ -36,11 +36,30 @@ has a working email address. The worker processes the queue every
 `NOTIFICATIONS_POLL_SECONDS` seconds (minimum 10). A manager can also trigger
 immediate processing with `POST /api/v1/notifications/deliver`.
 
-## Production SMTP Relay
+## Server deployment
 
-Mailpit is a local development service and is not included in
-`docker-compose.deploy.yml`. On the server, fill `/opt/lct-crm/.env` from
-`.env.server.example` and restart the API through the normal deploy process.
+`docker-compose.deploy.yml` includes Mailpit as an internal, non-relaying sink.
+Its SMTP port is available only on the Compose network (`mailpit:1025`); only
+the web UI is bound to `127.0.0.1:8025`. This is a safe default for checking
+the notification pipeline, but Mailpit does not deliver messages to real
+recipients.
+
+Copy `.env.server.example` to `/opt/lct-crm/.env` for this mode and keep:
+
+```dotenv
+SMTP_HOST=mailpit
+SMTP_PORT=1025
+SMTP_USERNAME=
+SMTP_PASSWORD=
+SMTP_FROM=crm@example.test
+SMTP_USE_TLS=false
+SMTP_USE_SSL=false
+```
+
+To deliver real mail, replace those values with the SMTP relay supplied by
+your mail provider and redeploy the API. Do not set `SMTP_HOST` to
+`localhost` or `127.0.0.1`: the API runs inside Docker, so those addresses
+refer to the API container itself.
 
 For a typical SMTP submission relay using STARTTLS on port 587:
 

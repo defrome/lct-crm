@@ -99,6 +99,7 @@ services:
   mailpit:
     image: axllent/mailpit:v1.31.1
     container_name: crm-mailpit
+    command: ["--smtp=0.0.0.0:1025"]
     expose:
       - "1025"
     ports:

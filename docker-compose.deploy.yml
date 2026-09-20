@@ -90,6 +90,7 @@ services:
   mailpit:
     image: axllent/mailpit:v1.31.1
     container_name: crm-mailpit
+    command: ["--smtp=0.0.0.0:1025"]
     expose:
       - "1025"
     ports:
@@ -146,7 +147,9 @@ services:
       SMTP_PORT: ${SMTP_PORT:-1025}
       SMTP_USERNAME: ${SMTP_USERNAME:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
-      SMTP_FROM: ${SMTP_FROM:-}
+      # Mailpit is the safe default sink for this Compose deployment. A real
+      # relay can override all SMTP_* values from the server-side .env.
+      SMTP_FROM: ${SMTP_FROM:-crm@example.test}
       SMTP_USE_TLS: ${SMTP_USE_TLS:-false}
       SMTP_USE_SSL: ${SMTP_USE_SSL:-false}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
