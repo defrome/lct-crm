@@ -438,6 +438,7 @@ function StageDeleteModal({
   const toast = useToast();
   const client = useQueryClient();
   const [targetStageId, setTargetStageId] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const preview = useMutation({
     mutationFn: () => stagesApi.deletePreview(stage.id),
     onSuccess: (result) => setTargetStageId(result.suggested_target_stage_id ?? ''),
@@ -454,7 +455,11 @@ function StageDeleteModal({
   });
 
   useEffect(() => {
-    if (open) preview.mutate();
+    if (open) {
+      setConfirmDelete(false);
+      setTargetStageId('');
+      preview.mutate();
+    }
   // The preview is always fetched afresh when the dialog opens.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, stage.id]);
@@ -469,7 +474,12 @@ function StageDeleteModal({
       footer={
         <>
           <Button onClick={onClose} disabled={remove.isPending}>Отмена</Button>
-          <Button variant="danger" loading={remove.isPending} disabled={!targetStageId} onClick={() => remove.mutate()}>
+          <Button
+            variant="danger"
+            loading={remove.isPending}
+            disabled={!targetStageId || !confirmDelete}
+            onClick={() => remove.mutate()}
+          >
             Удалить этап
           </Button>
         </>
@@ -480,12 +490,30 @@ function StageDeleteModal({
           <p className="text-body-m text-fg-soft">
             Будет переведено карточек: <strong className="text-fg">{preview.data?.affected_count ?? 0}</strong>.
           </p>
+          {(preview.data?.interaction_ids.length ?? 0) > 0 && (
+            <div className="rounded-m border border-line-soft bg-surface-2 px-3 py-2">
+              <p className="text-desc font-medium text-fg-muted">Затронутые карточки</p>
+              <ul className="mt-1 max-h-28 space-y-1 overflow-y-auto text-desc text-fg-soft">
+                {preview.data?.interaction_ids.map((interactionId) => (
+                  <li key={interactionId} className="truncate font-mono" title={interactionId}>
+                    {interactionId}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <Select
             label="Этап назначения"
             value={targetStageId}
             required
             options={alternatives.map((candidate) => ({ value: candidate.id, label: candidate.name }))}
             onChange={(event) => setTargetStageId(event.target.value)}
+          />
+          <Checkbox
+            label="Подтверждаю массовый перевод карточек и удаление этапа"
+            hint="Операция выполняется одной транзакцией и не может быть отменена автоматически"
+            checked={confirmDelete}
+            onChange={(event) => setConfirmDelete(event.target.checked)}
           />
         </div>
       )}
