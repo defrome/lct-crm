@@ -47,7 +47,6 @@ export function AppShell() {
   const { can, signOut } = useAuth();
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [railExpanded, setRailExpanded] = useState(false);
   const location = useLocation();
 
   // oxlint-disable-next-line react/set-state-in-effect
@@ -62,34 +61,21 @@ export function AppShell() {
         {isDesktop && (
           <aside
             aria-label="Инструменты"
-            onMouseEnter={() => setRailExpanded(true)}
-            onMouseLeave={() => setRailExpanded(false)}
-            onFocusCapture={() => setRailExpanded(true)}
-            onBlurCapture={(event) => {
-              if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-                setRailExpanded(false);
-              }
-            }}
-            className={clsx(
-              'sticky top-4 z-[1100] box-content flex h-[calc(100dvh-6rem)] shrink-0 flex-col items-center gap-3 overflow-visible py-8 pl-8 transition-[width] duration-300 ease-productive-entrance',
-              railExpanded ? 'w-64' : 'w-12',
-            )}
+            className="sticky top-4 z-[1100] box-content flex h-[calc(100dvh-6rem)] w-12 shrink-0 flex-col items-center gap-3 py-8 pl-8"
           >
             <BrandMark />
-            <nav className="mt-10 flex w-full flex-col gap-3">
+            <nav className="mt-10 flex flex-col gap-3">
               {allowed(TOOL_NAV).map((item) => (
-                <RailLink key={item.to} item={item} expanded={railExpanded} onNavigate={() => setRailExpanded(false)} />
+                <RailLink key={item.to} item={item} />
               ))}
             </nav>
-            <div className="mt-auto w-full">
+            <div className="mt-auto">
               <Tooltip label="Выйти" side="right">
                 <IconButton
                   icon="logout"
                   label="Выйти"
                   variant="ghost"
                   onClick={() => void signOut()}
-                  className={railExpanded ? 'w-full justify-start gap-3 px-3' : undefined}
-                  showLabel={railExpanded}
                 />
               </Tooltip>
             </div>
@@ -158,40 +144,24 @@ export function BrandMark({ size = 48 }: { size?: 32 | 48 }) {
   );
 }
 
-function RailLink({
-  item,
-  expanded,
-  onNavigate,
-}: {
-  item: NavItem;
-  expanded: boolean;
-  onNavigate: () => void;
-}) {
+function RailLink({ item }: { item: NavItem }) {
   const exact = useMatch({ path: item.to, end: true });
   const nested = useMatch({ path: `${item.to}/*` });
   const current = Boolean(exact || nested);
 
   return (
+    <Tooltip label={item.label} side="right">
       <NavLink
         to={item.to}
         aria-label={item.label}
-        onClick={onNavigate}
         className={clsx(
-          'flex h-12 w-full items-center gap-3 overflow-hidden rounded-m px-3 transition-[background-color,transform,justify-content] duration-150 ease-productive active:scale-[.94]',
-          expanded ? 'justify-start' : 'justify-center',
+          'grid size-12 place-items-center rounded-m transition-[background-color,transform] duration-150 ease-productive active:scale-[.94]',
           current ? 'bg-accent text-white hover:bg-accent-hover' : 'text-fg hover:bg-neutral-container',
         )}
       >
         <Icon name={item.icon} className="size-6 shrink-0" />
-        <span
-          className={clsx(
-            'overflow-hidden whitespace-nowrap text-body-m transition-[max-width,opacity] duration-200 ease-productive-exit',
-            expanded ? 'max-w-[180px] opacity-100' : 'max-w-0 opacity-0',
-          )}
-        >
-          {item.label}
-        </span>
       </NavLink>
+    </Tooltip>
   );
 }
 
