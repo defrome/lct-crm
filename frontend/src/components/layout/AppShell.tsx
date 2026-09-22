@@ -81,13 +81,15 @@ export function AppShell() {
                 <RailLink key={item.to} item={item} expanded={railExpanded} onNavigate={() => setRailExpanded(false)} />
               ))}
             </nav>
-            <div className="mt-auto">
+            <div className="mt-auto w-full">
               <Tooltip label="Выйти" side="right">
                 <IconButton
                   icon="logout"
                   label="Выйти"
                   variant="ghost"
                   onClick={() => void signOut()}
+                  className={railExpanded ? 'w-full justify-start gap-3 px-3' : undefined}
+                  showLabel={railExpanded}
                 />
               </Tooltip>
             </div>

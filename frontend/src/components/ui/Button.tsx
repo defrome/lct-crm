@@ -137,6 +137,7 @@ interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   go?: boolean;
   /** Точка-индикатор, как у колокольчика уведомлений. */
   dot?: boolean;
+  showLabel?: boolean;
 }
 
 // oxlint-disable-next-line react/only-export-components
@@ -147,6 +148,7 @@ export function IconButton({
   size = 'l',
   go,
   dot,
+  showLabel = false,
   className,
   ...rest
 }: IconButtonProps) {
@@ -159,7 +161,7 @@ export function IconButton({
         'group/ibtn relative inline-grid shrink-0 place-items-center rounded-m border-0',
         'transition-[background-color,transform] duration-150 ease-productive active:scale-[.94] active:duration-100',
         'disabled:pointer-events-none disabled:text-fg-disabled',
-        size === 'l' ? 'size-12' : 'size-9',
+        showLabel ? 'h-12 w-full justify-start gap-3 px-3' : size === 'l' ? 'size-12' : 'size-9',
         ICON_LOOK[variant],
         className,
       )}
@@ -173,6 +175,7 @@ export function IconButton({
             'transition-transform duration-300 ease-bounce group-hover/ibtn:translate-x-0.5 group-hover/ibtn:-translate-y-0.5',
         )}
       />
+      {showLabel && <span className="whitespace-nowrap text-body-m">{label}</span>}
       {dot && (
         <i
           aria-hidden="true"
