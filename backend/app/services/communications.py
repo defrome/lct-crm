@@ -426,7 +426,11 @@ class CommunicationService:
                         f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage",
                         json={"chat_id": recipient_chat_id, "text": message},
                     )
-                    response.raise_for_status()
+                    # Check the status code directly instead of calling
+                    # ``raise_for_status``: lightweight clients (and tests)
+                    # may return a response without an attached request.
+                    if response.status_code >= 400:
+                        return False, f"Telegram HTTP {response.status_code}"
             except Exception as exc:  # pragma: no cover - external Telegram failure
                 return False, f"Ошибка Telegram: {exc}"
             return True, None
