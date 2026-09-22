@@ -47,6 +47,7 @@ export function AppShell() {
   const { can, signOut } = useAuth();
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [railExpanded, setRailExpanded] = useState(false);
   const location = useLocation();
 
   // oxlint-disable-next-line react/set-state-in-effect
@@ -61,12 +62,23 @@ export function AppShell() {
         {isDesktop && (
           <aside
             aria-label="Инструменты"
-            className="group/rail sticky top-4 z-[1100] box-content flex h-[calc(100dvh-6rem)] w-12 shrink-0 flex-col items-center gap-3 overflow-visible py-8 pl-8 transition-[width] duration-300 ease-productive-entrance hover:w-64 focus-within:w-64"
+            onMouseEnter={() => setRailExpanded(true)}
+            onMouseLeave={() => setRailExpanded(false)}
+            onFocusCapture={() => setRailExpanded(true)}
+            onBlurCapture={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                setRailExpanded(false);
+              }
+            }}
+            className={clsx(
+              'sticky top-4 z-[1100] box-content flex h-[calc(100dvh-6rem)] shrink-0 flex-col items-center gap-3 overflow-visible py-8 pl-8 transition-[width] duration-300 ease-productive-entrance',
+              railExpanded ? 'w-64' : 'w-12',
+            )}
           >
             <BrandMark />
             <nav className="mt-10 flex w-full flex-col gap-3">
               {allowed(TOOL_NAV).map((item) => (
-                <RailLink key={item.to} item={item} />
+                <RailLink key={item.to} item={item} expanded={railExpanded} onNavigate={() => setRailExpanded(false)} />
               ))}
             </nav>
             <div className="mt-auto">
@@ -144,7 +156,15 @@ export function BrandMark({ size = 48 }: { size?: 32 | 48 }) {
   );
 }
 
-function RailLink({ item }: { item: NavItem }) {
+function RailLink({
+  item,
+  expanded,
+  onNavigate,
+}: {
+  item: NavItem;
+  expanded: boolean;
+  onNavigate: () => void;
+}) {
   const exact = useMatch({ path: item.to, end: true });
   const nested = useMatch({ path: `${item.to}/*` });
   const current = Boolean(exact || nested);
@@ -153,13 +173,20 @@ function RailLink({ item }: { item: NavItem }) {
       <NavLink
         to={item.to}
         aria-label={item.label}
+        onClick={onNavigate}
         className={clsx(
-          'flex h-12 w-full items-center justify-center gap-3 overflow-hidden rounded-m px-3 transition-[background-color,transform,justify-content] duration-150 ease-productive active:scale-[.94] group-hover/rail:justify-start',
+          'flex h-12 w-full items-center gap-3 overflow-hidden rounded-m px-3 transition-[background-color,transform,justify-content] duration-150 ease-productive active:scale-[.94]',
+          expanded ? 'justify-start' : 'justify-center',
           current ? 'bg-accent text-white hover:bg-accent-hover' : 'text-fg hover:bg-neutral-container',
         )}
       >
         <Icon name={item.icon} className="size-6 shrink-0" />
-        <span className="max-w-0 overflow-hidden whitespace-nowrap text-body-m opacity-0 transition-[max-width,opacity] duration-200 ease-productive-exit group-hover/rail:max-w-[180px] group-hover/rail:opacity-100 group-focus-within/rail:max-w-[180px] group-focus-within/rail:opacity-100">
+        <span
+          className={clsx(
+            'overflow-hidden whitespace-nowrap text-body-m transition-[max-width,opacity] duration-200 ease-productive-exit',
+            expanded ? 'max-w-[180px] opacity-100' : 'max-w-0 opacity-0',
+          )}
+        >
           {item.label}
         </span>
       </NavLink>
