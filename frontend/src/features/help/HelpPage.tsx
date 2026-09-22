@@ -57,7 +57,16 @@ function UserGuide() {
           <li><strong className="text-fg">5. Стройте отчёт.</strong> На вкладке «Отчёты» выберите колонки и формат: XLS, XLSX, PDF, CSV или JSON.</li>
         </ol>
       </section>
-      <ScreenPreview title="Карточка взаимодействия" />
+      <figure className="card overflow-hidden">
+        <img
+          src="/interaction-card-help.png"
+          alt="Карточка взаимодействия МГТУ им. Н.Э. Баумана"
+          className="block h-auto w-full"
+        />
+        <figcaption className="border-t border-border-soft px-4 py-3 text-desc text-fg-muted">
+          Пример карточки взаимодействия с маршрутом, историей, договором и файлами.
+        </figcaption>
+      </figure>
       <section className="card card-pad xl:col-span-2">
         <CardHeader title="Быстрые ответы" />
         <dl className="mt-4 grid gap-x-8 gap-y-4 md:grid-cols-2">
