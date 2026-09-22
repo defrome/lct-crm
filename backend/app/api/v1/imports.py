@@ -183,6 +183,26 @@ async def get_job(job_id: uuid.UUID, session: SessionDep, scope: ScopeDep) -> Im
     return ImportJobRead.model_validate(await ImportService(session, scope).get_job(job_id))
 
 
+@router.delete(
+    "/{job_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=None,
+    summary="Удалить загруженный каталог",
+    description=(
+        "Скрывает задачу импорта из истории. Уже созданные или обновлённые при импорте "
+        "записи CRM не удаляются. Доступно ролям `manager` и `admin`."
+    ),
+    responses=READ_ERRORS,
+)
+async def delete_job(
+    job_id: uuid.UUID,
+    session: SessionDep,
+    scope: ScopeDep,
+    _: CurrentUser = Depends(require_manager),
+) -> None:
+    await ImportService(session, scope).delete(job_id)
+
+
 @router.post(
     "/{job_id}/mapping",
     response_model=ImportJobRead,

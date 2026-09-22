@@ -246,6 +246,7 @@ export const transitionsApi = {
 export const importsApi = {
   list: (params?: PageQuery) => api.get<Page<ImportJobRead>>('/imports', q(params)),
   get: (jobId: UUID) => api.get<ImportJobRead>(`/imports/${jobId}`),
+  remove: (jobId: UUID) => api.delete(`/imports/${jobId}`),
 
   upload: (file: File, target: ImportTarget) => {
     const form = new FormData();

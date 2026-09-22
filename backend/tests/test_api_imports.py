@@ -125,6 +125,34 @@ async def test_commit_before_validation_is_rejected(session, client, manager_use
     assert response.json()["error"]["code"] == "IMPORT_JOB_WRONG_STATE"
 
 
+async def test_manager_can_delete_import_job_without_removing_imported_data(
+    session, client, manager_user
+):
+    content = make_xlsx([catalog_row("МГТУ")])
+    uploaded = await client.post(
+        "/api/v1/imports", **upload_payload(content), headers=auth(manager_user)
+    )
+    job_id = uploaded.json()["job"]["id"]
+    mapping = {item["column"]: item["field"] for item in uploaded.json()["suggested_mapping"]}
+
+    await client.post(
+        f"/api/v1/imports/{job_id}/mapping", json={"mapping": mapping}, headers=auth(manager_user)
+    )
+    await client.post(f"/api/v1/imports/{job_id}/validate", headers=auth(manager_user))
+    await client.post(f"/api/v1/imports/{job_id}/commit", headers=auth(manager_user))
+
+    deleted = await client.delete(f"/api/v1/imports/{job_id}", headers=auth(manager_user))
+    assert deleted.status_code == 204
+
+    history = await client.get("/api/v1/imports", headers=auth(manager_user))
+    assert history.json()["total"] == 0
+    missing = await client.get(f"/api/v1/imports/{job_id}", headers=auth(manager_user))
+    assert missing.status_code == 404
+
+    interactions = await client.get("/api/v1/interactions", headers=auth(manager_user))
+    assert interactions.json()["total"] == 1
+
+
 async def test_import_requires_manager_role(session, client, kam_user):
     content = make_xlsx([catalog_row("МГТУ")])
     response = await client.post(

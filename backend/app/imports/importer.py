@@ -185,6 +185,18 @@ class ImportService:
     async def get_job(self, job_id: uuid.UUID) -> ImportJob:
         return await self.jobs.get_or_fail(job_id)
 
+    async def delete(self, job_id: uuid.UUID) -> None:
+        """Hide an uploaded catalogue and its import history entry.
+
+        The import may have updated records that predate it, so deleting a job
+        must never attempt to roll back catalog data.  The source and parsed
+        rows remain in the soft-deleted audit trail under the project's
+        retention policy.
+        """
+        job = await self.jobs.get_or_fail(job_id)
+        await self.jobs.soft_delete(job)
+        await self.session.commit()
+
     async def set_mapping(
         self, job_id: uuid.UUID, mapping: dict[str, str], *, save_as_preset: str | None = None
     ) -> ImportJob:

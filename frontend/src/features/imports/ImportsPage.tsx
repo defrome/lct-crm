@@ -1,13 +1,18 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { importsApi } from '@/api/endpoints';
 import { useImportJobs } from '@/api/queries';
 import type { ImportJobRead, ImportJobStatus } from '@/api/types';
+import { useToast } from '@/app/ToastProvider';
 import { Page } from '@/components/layout/AppShell';
 import { Badge, type Tone } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
+import { Button, IconButton } from '@/components/ui/Button';
 import { DataTable, Pagination, type Column } from '@/components/ui/DataTable';
 import { FilterBar } from '@/components/ui/FilterBar';
 import { Icon } from '@/components/ui/Icon';
+import { ConfirmModal } from '@/components/ui/Modal';
 import { EmptyState, PageHeader } from '@/components/ui/States';
 import { useDebounced, useFilters } from '@/hooks';
 import { formatDateTime } from '@/lib/format';
@@ -25,14 +30,27 @@ const DEFAULTS = { q: '', sort: '-created_at', page: '1', size: '50' };
 
 export function ImportsPage() {
   const navigate = useNavigate();
+  const toast = useToast();
+  const client = useQueryClient();
   const { values, set, reset, activeCount } = useFilters(DEFAULTS);
   const search = useDebounced(values.q, 350);
+  const [deleting, setDeleting] = useState<ImportJobRead | null>(null);
 
   const { data, isPending, error, refetch } = useImportJobs({
     search: search || undefined,
     sort: values.sort || undefined,
     page: Number(values.page),
     size: Number(values.size),
+  });
+
+  const remove = useMutation({
+    mutationFn: () => importsApi.remove(deleting!.id),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['imports'] });
+      toast.notify('Каталог удалён из истории импортов');
+      setDeleting(null);
+    },
+    onError: (mutationError) => toast.fail(mutationError, 'Не удалось удалить каталог'),
   });
 
   const columns: Column<ImportJobRead>[] = [
@@ -103,6 +121,24 @@ export function ImportsPage() {
         </span>
       ),
     },
+    {
+      key: 'actions',
+      header: 'Действия',
+      width: '1%',
+      align: 'right',
+      render: (row) => (
+        <IconButton
+          icon="trash"
+          label={`Удалить каталог «${row.filename}»`}
+          size="m"
+          variant="ghost"
+          onClick={(event) => {
+            event.stopPropagation();
+            setDeleting(row);
+          }}
+        />
+      ),
+    },
   ];
 
   return (
@@ -145,8 +181,20 @@ export function ImportsPage() {
               <span className="truncate text-body-s text-fg">{row.filename}</span>
               <span className="flex items-center justify-between gap-2">
                 <Badge tone={STATUS[row.status].tone}>{STATUS[row.status].label}</Badge>
-                <span className="tnum text-desc text-fg-muted">
-                  {formatDateTime(row.created_at)}
+                <span className="flex items-center gap-1">
+                  <span className="tnum text-desc text-fg-muted">
+                    {formatDateTime(row.created_at)}
+                  </span>
+                  <IconButton
+                    icon="trash"
+                    label={`Удалить каталог «${row.filename}»`}
+                    size="m"
+                    variant="ghost"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setDeleting(row);
+                    }}
+                  />
                 </span>
               </span>
             </div>
@@ -177,6 +225,24 @@ export function ImportsPage() {
           />
         )}
       </div>
+
+      <ConfirmModal
+        open={Boolean(deleting)}
+        onClose={() => setDeleting(null)}
+        onConfirm={() => remove.mutate()}
+        loading={remove.isPending}
+        danger
+        title="Удалить каталог?"
+        confirmLabel="Удалить"
+        message={
+          deleting ? (
+            <>
+              Каталог «{deleting.filename}» исчезнет из истории импортов. Уже созданные или
+              обновлённые записи CRM останутся без изменений.
+            </>
+          ) : null
+        }
+      />
     </Page>
   );
 }
