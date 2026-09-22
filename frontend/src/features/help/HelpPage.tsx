@@ -4,7 +4,7 @@ import { Page } from '@/components/layout/AppShell';
 import { Chip } from '@/components/ui/Button';
 import { CardHeader, PageHeader } from '@/components/ui/States';
 
-type Section = 'user' | 'interactions' | 'imports' | 'reports' | 'admin' | 'architecture';
+type Section = 'user' | 'interactions' | 'imports' | 'reports';
 
 export function HelpPage() {
   const [section, setSection] = useState<Section>('user');
@@ -29,19 +29,17 @@ export function HelpPage() {
         <Chip selected={section === 'reports'} icon="report" onClick={() => setSection('reports')}>
           Отчёты
         </Chip>
-        <Chip selected={section === 'admin'} icon="settings" onClick={() => setSection('admin')}>
+        {/* <Chip selected={section === 'admin'} icon="settings" onClick={() => setSection('admin')}>
           Администратору
         </Chip>
         <Chip selected={section === 'architecture'} icon="route" onClick={() => setSection('architecture')}>
           Архитектура
-        </Chip>
+        </Chip> */}
       </nav>
       {section === 'user' && <UserGuide />}
       {section === 'interactions' && <InteractionsGuide />}
       {section === 'imports' && <ImportsGuide />}
       {section === 'reports' && <ReportsGuide />}
-      {section === 'admin' && <AdminGuide />}
-      {section === 'architecture' && <ArchitectureGuide />}
     </Page>
   );
 }
