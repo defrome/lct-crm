@@ -15,7 +15,7 @@ from app.models.enums import UserRole, UserVisibilityMode
 from app.models.university import University
 from app.models.user import User, UserVisibilityUniversity
 from app.repositories.user import UserRepository
-from app.schemas.user import UserCreate, UserVisibilityUpdate
+from app.schemas.user import UserCreate, UserUpdate, UserVisibilityUpdate
 from app.services.base import integrity_guard
 from app.services.text import clean_text, normalize_person_name
 
@@ -48,6 +48,7 @@ class UserService:
             full_name=full_name,
             full_name_normalized=normalize_person_name(full_name),
             email=clean_text(data.email),
+            telegram_user_id=clean_text(data.telegram_user_id),
             role=data.role,
             is_active=data.is_active,
         )
@@ -64,6 +65,13 @@ class UserService:
         user = await self.repo.get_or_fail(user_id)
         await self.repo.soft_delete(user)
         await self.session.commit()
+
+    async def update(self, user_id: uuid.UUID, data: UserUpdate) -> User:
+        """Update notification contact details for an existing employee."""
+        user = await self.get(user_id)
+        user.telegram_user_id = clean_text(data.telegram_user_id)
+        await self.session.commit()
+        return user
 
     async def update_visibility(self, user_id: uuid.UUID, data: UserVisibilityUpdate) -> User:
         """Replace a KAM's explicit visibility policy atomically.

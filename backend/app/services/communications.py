@@ -402,13 +402,29 @@ class CommunicationService:
                 return False, f"Ошибка SMTP: {exc}"
             return True, None
         if row.channel == "telegram":
-            if not settings.telegram_bot_token or not settings.telegram_chat_id:
-                return False, "Telegram не настроен: укажите TELEGRAM_BOT_TOKEN и TELEGRAM_CHAT_ID"
+            if not settings.telegram_bot_token:
+                return False, "Telegram не настроен: укажите TELEGRAM_BOT_TOKEN"
+            # Resolve a personal destination for responsible/explicit user
+            # recipients.  The global chat ID is only a fallback for system
+            # deliveries without a user recipient; never leak a reminder for
+            # one responsible person to another chat.
+            if row.recipient_user_id is not None:
+                recipient_chat_id = await self.session.scalar(
+                    sa.select(User.telegram_user_id).where(
+                        User.id == row.recipient_user_id,
+                        User.deleted_at.is_(None),
+                        User.is_active.is_(True),
+                    )
+                )
+            else:
+                recipient_chat_id = settings.telegram_chat_id
+            if not recipient_chat_id:
+                return False, "У получателя не указан Telegram ID"
             try:
                 async with httpx.AsyncClient(timeout=10) as client:
                     response = await client.post(
                         f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage",
-                        json={"chat_id": settings.telegram_chat_id, "text": message},
+                        json={"chat_id": recipient_chat_id, "text": message},
                     )
                     response.raise_for_status()
             except Exception as exc:  # pragma: no cover - external Telegram failure

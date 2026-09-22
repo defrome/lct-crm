@@ -57,6 +57,7 @@ export interface UserShort {
 export interface UserRead extends UserShort {
   keycloak_id: string;
   email: string | null;
+  telegram_user_id: string | null;
   is_active: boolean;
   visibility_mode: UserVisibilityMode;
   created_at: DateTime;
@@ -67,8 +68,13 @@ export interface UserCreate {
   keycloak_id: string;
   full_name: string;
   email?: string | null;
+  telegram_user_id?: string | null;
   role?: UserRole;
   is_active?: boolean;
+}
+
+export interface UserUpdate {
+  telegram_user_id?: string | null;
 }
 
 export interface UserVisibilityUpdate {

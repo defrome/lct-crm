@@ -18,7 +18,7 @@ from app.api.v1.deps import (
 )
 from app.core.security import CurrentUser, require_admin
 from app.schemas.common import Page
-from app.schemas.user import UserCreate, UserRead, UserVisibilityUpdate
+from app.schemas.user import UserCreate, UserRead, UserUpdate, UserVisibilityUpdate
 from app.services.users import UserService
 
 router = APIRouter(prefix="/users", tags=["Сотрудники"])
@@ -92,6 +92,25 @@ async def create_user(
     _: CurrentUser = Depends(require_admin),
 ) -> UserRead:
     return UserRead.model_validate(await UserService(session, scope).create(data))
+
+
+@router.patch(
+    "/{user_id}",
+    response_model=UserRead,
+    summary="Обновить Telegram ID сотрудника",
+    description=(
+        "Только администратор. Передайте `null`, чтобы отключить личные Telegram-напоминания."
+    ),
+    responses=CATALOG_ERRORS,
+)
+async def update_user(
+    user_id: uuid.UUID,
+    data: UserUpdate,
+    session: SessionDep,
+    scope: ScopeDep,
+    _: CurrentUser = Depends(require_admin),
+) -> UserRead:
+    return UserRead.model_validate(await UserService(session, scope).update(user_id, data))
 
 
 @router.delete(

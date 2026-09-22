@@ -16,6 +16,7 @@ class UserRead(ORMModel):
     keycloak_id: str
     full_name: str
     email: str | None = None
+    telegram_user_id: str | None = None
     role: UserRole
     is_active: bool
     visibility_mode: UserVisibilityMode
@@ -35,8 +36,15 @@ class UserCreate(ORMModel):
     keycloak_id: str = Field(min_length=1, max_length=255)
     full_name: str = Field(min_length=1, max_length=500)
     email: str | None = Field(default=None, max_length=320)
+    telegram_user_id: str | None = Field(default=None, min_length=1, max_length=64)
     role: UserRole = UserRole.USER
     is_active: bool = True
+
+
+class UserUpdate(ORMModel):
+    """Administrator-editable contact settings for an existing employee."""
+
+    telegram_user_id: str | None = Field(default=None, min_length=1, max_length=64)
 
 
 class UserVisibilityUpdate(ORMModel):

@@ -24,13 +24,19 @@ from app.models.enums import (
 class User(DomainBase):
     __tablename__ = "users"
 
-    __pd_fields__: ClassVar[frozenset[str]] = frozenset({"full_name", "email"})
+    __pd_fields__: ClassVar[frozenset[str]] = frozenset(
+        {"full_name", "email", "telegram_user_id"}
+    )
 
     keycloak_id: Mapped[str] = mapped_column(sa.Text, nullable=False, unique=True)
     full_name: Mapped[str] = mapped_column(sa.Text, nullable=False)
     # Folded full name — the Excel "ФИО Менеджера" column is matched against it.
     full_name_normalized: Mapped[str] = mapped_column(sa.Text, nullable=False)
     email: Mapped[str | None] = mapped_column(sa.Text, default=None)
+    # Telegram user/chat identifier used for direct notifications.  Kept as
+    # text because Telegram IDs may exceed 32-bit integer range and can be
+    # negative for group chats.
+    telegram_user_id: Mapped[str | None] = mapped_column(sa.Text, default=None)
     role: Mapped[UserRole] = mapped_column(
         sa.Enum(UserRole, name=USER_ROLE_ENUM, values_callable=lambda e: [m.value for m in e]),
         nullable=False,
