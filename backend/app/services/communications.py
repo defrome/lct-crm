@@ -425,6 +425,10 @@ class CommunicationService:
                     .where(
                         NotificationDelivery.deleted_at.is_(None),
                         _visible(self.scope, NotificationDelivery),
+                        sa.or_(
+                            NotificationDelivery.recipient_user_id == self.scope.user_id,
+                            NotificationDelivery.recipient_user_id.is_(None),
+                        ),
                     )
                     .order_by(NotificationDelivery.created_at.desc())
                     .limit(limit)
