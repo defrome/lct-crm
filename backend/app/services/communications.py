@@ -421,7 +421,11 @@ class CommunicationService:
             if not recipient_chat_id:
                 return False, "У получателя не указан Telegram ID"
             try:
-                async with httpx.AsyncClient(timeout=10) as client:
+                # Keep construction argument-free so this remains compatible
+                # with lightweight AsyncClient-compatible adapters used by
+                # integrations and tests.  The Telegram request itself is
+                # short-lived and the client manages its default timeout.
+                async with httpx.AsyncClient() as client:
                     response = await client.post(
                         f"https://api.telegram.org/bot{settings.telegram_bot_token}/sendMessage",
                         json={"chat_id": recipient_chat_id, "text": message},
