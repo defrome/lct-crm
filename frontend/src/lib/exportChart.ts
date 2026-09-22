@@ -14,10 +14,24 @@ const THEME_VARS = [
 ];
 
 function resolveTheme(): Record<string, string> {
-  const computed = getComputedStyle(document.documentElement);
-  const resolved: Record<string, string> = {};
-  for (const name of THEME_VARS) resolved[name] = computed.getPropertyValue(name).trim();
-  return resolved;
+  const probe = document.createElement('span');
+  probe.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;color:var(--atmr-fg-default)';
+  document.body.append(probe);
+
+  try {
+    const resolved: Record<string, string> = {};
+    for (const name of THEME_VARS) {
+      // getPropertyValue preserves aliases such as
+      // `--crm-chart-now: var(--atmr-accent-200)`. An SVG opened from a Blob
+      // has no page stylesheet, so those aliases must be resolved all the way
+      // to a colour before it is painted on the export canvas.
+      probe.style.color = `var(${name})`;
+      resolved[name] = getComputedStyle(probe).color;
+    }
+    return resolved;
+  } finally {
+    probe.remove();
+  }
 }
 
 /**
@@ -45,6 +59,10 @@ export async function exportChartPng(
   clone.setAttribute('width', String(width));
   clone.setAttribute('height', String(height));
   clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  // Category charts keep their export-only SVG outside the visible card. Its
+  // positioning is useful in the app, but meaningless (and potentially
+  // clipping) inside a standalone SVG image.
+  clone.removeAttribute('style');
 
   let markup = new XMLSerializer().serializeToString(clone);
   for (const [name, value] of Object.entries(theme)) {
