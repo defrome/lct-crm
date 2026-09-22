@@ -262,7 +262,12 @@ export function CategoryBars({
   // the same export path as the SVG-based sequence chart.
   const exportWidth = 800;
   const rowHeight = 64;
-  const exportHeight = Math.max(rowHeight, data.length * rowHeight);
+  // Add a small canvas margin so downloaded charts do not sit flush against
+  // the image edges (the visible card supplies this spacing on screen).
+  const horizontalPadding = 28;
+  const verticalPadding = 24;
+  const contentWidth = exportWidth - horizontalPadding * 2;
+  const exportHeight = Math.max(rowHeight, data.length * rowHeight) + verticalPadding * 2;
 
   return (
     <div className="relative">
@@ -275,12 +280,12 @@ export function CategoryBars({
         style={{ position: 'absolute', left: '-100000px', top: 0 }}
       >
         {data.map((datum, index) => {
-          const y = index * rowHeight;
-          const barWidth = ((datum.value / max) * (exportWidth - 180));
+          const y = verticalPadding + index * rowHeight;
+          const barWidth = (datum.value / max) * (contentWidth - 180);
           return (
             <g key={datum.key}>
               <text
-                x="0"
+                x={horizontalPadding}
                 y={y + 18}
                 fill="var(--atmr-fg-default)"
                 fontSize="16"
@@ -289,7 +294,7 @@ export function CategoryBars({
                 {datum.name}
               </text>
               <text
-                x={exportWidth}
+                x={exportWidth - horizontalPadding}
                 y={y + 18}
                 textAnchor="end"
                 fill="var(--atmr-fg-default)"
@@ -300,15 +305,15 @@ export function CategoryBars({
                 {datum.value}
               </text>
               <rect
-                x="0"
+                x={horizontalPadding}
                 y={y + 30}
-                width={exportWidth}
+                width={contentWidth}
                 height="12"
                 rx="6"
                 fill="var(--atmr-neutral-container-default)"
               />
               <rect
-                x="0"
+                x={horizontalPadding}
                 y={y + 30}
                 width={barWidth}
                 height="12"
