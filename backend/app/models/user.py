@@ -24,9 +24,7 @@ from app.models.enums import (
 class User(DomainBase):
     __tablename__ = "users"
 
-    __pd_fields__: ClassVar[frozenset[str]] = frozenset(
-        {"full_name", "email", "telegram_user_id"}
-    )
+    __pd_fields__: ClassVar[frozenset[str]] = frozenset({"full_name", "email", "telegram_user_id"})
 
     keycloak_id: Mapped[str] = mapped_column(sa.Text, nullable=False, unique=True)
     full_name: Mapped[str] = mapped_column(sa.Text, nullable=False)
