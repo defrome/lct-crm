@@ -69,6 +69,44 @@ async def test_full_cycle_creates_every_entity(session):
     assert set(contacts) == {"Соколова Анна", "Орлов Дмитрий"}
 
 
+async def test_full_cycle_imports_selected_columns_from_exported_report(session):
+    import io
+
+    from openpyxl import Workbook
+
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(["Отчёт по взаимодействиям"])
+    sheet.append(["Отбор: без ограничений. Записей: 1. Сформирован 18 сентября 2026 г."])
+    sheet.append(
+        [
+            "Название вуза",
+            "ИТ-направление",
+            "ИТ-продукт",
+            "Статус работы с вузом",
+            "Номер договора",
+            "Подписание лицензии",
+            "Срок, лет",
+            "Комментарий",
+        ]
+    )
+    sheet.append(
+        ["МГТУ", "Разработка", "Astra Linux", "Передано", "ДЛ-002", "17.02.2026", 3, "Из отчёта"]
+    )
+    buffer = io.BytesIO()
+    workbook.save(buffer)
+    workbook.close()
+
+    _, _, stats = await run_import(session, buffer.getvalue())
+
+    assert stats["created"] == 1
+    interaction = await session.scalar(sa.select(Interaction))
+    assert interaction is not None
+    assert interaction.contract_number == "ДЛ-002"
+    assert interaction.transfer_status == "Передано"
+    assert interaction.license_expires_at == dt.date(2029, 2, 17)
+
+
 async def test_upload_is_stored_with_an_object_key(session):
     content = make_xlsx([catalog_row("MGTU")])
     service = ImportService(session, AccessScope.system())

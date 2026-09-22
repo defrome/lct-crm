@@ -136,6 +136,61 @@ def test_mapping_is_suggested_for_customer_headers():
     assert suggestion["Ответственные от ВУЗа"] == "university_contacts.full_name"
 
 
+def test_mapping_is_suggested_for_exported_columns_when_present():
+    headers = [
+        "Название вуза",
+        "ИТ-направление",
+        "ИТ-продукт",
+        "Статус работы с вузом",
+        "Ответственный",
+        "Номер договора",
+        "Подписание лицензии",
+        "Срок, лет",
+        "Лицензия действует до",
+        "Комментарий",
+    ]
+
+    suggestion = {
+        item["column"]: item["field"]
+        for item in suggest_mapping(headers, ImportTarget.INTERACTIONS)
+    }
+
+    assert suggestion == {
+        "Название вуза": "universities.name",
+        "ИТ-направление": "it_directions.name",
+        "ИТ-продукт": "it_products.name",
+        "Статус работы с вузом": "interactions.transfer_status",
+        "Ответственный": "interactions.responsible_user_id",
+        "Номер договора": "interactions.contract_number",
+        "Подписание лицензии": "interactions.license_signed_at",
+        "Срок, лет": "interactions.license_years",
+        "Лицензия действует до": None,
+        "Комментарий": "interactions.comment",
+    }
+
+
+def test_parses_headers_after_exported_report_metadata():
+    import io
+
+    from openpyxl import Workbook
+
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(["Отчёт по взаимодействиям"])
+    sheet.append(["Отбор: без ограничений. Записей: 1. Сформирован 18 сентября 2026 г."])
+    sheet.append(["Название вуза", "ИТ-продукт", "Комментарий"])
+    sheet.append(["МГТУ", "Astra Linux", "Импорт из отчёта"])
+    buffer = io.BytesIO()
+    workbook.save(buffer)
+    workbook.close()
+
+    parsed = parse_file(buffer.getvalue(), "report.xlsx")
+
+    assert parsed.headers == ["Название вуза", "ИТ-продукт", "Комментарий"]
+    assert parsed.rows[0].row_number == 4
+    assert parsed.rows[0].cells["Название вуза"] == "МГТУ"
+
+
 def test_mapping_without_required_field_is_rejected():
     with pytest.raises(ImportMappingIncompleteError):
         validate_mapping({"Вендор": "vendors.name"}, ImportTarget.INTERACTIONS, ["Вендор"])

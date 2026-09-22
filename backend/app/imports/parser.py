@@ -13,6 +13,7 @@ import io
 import re
 import zipfile
 from dataclasses import dataclass, field
+from itertools import chain
 from typing import Any, Literal
 
 from openpyxl import load_workbook
@@ -54,7 +55,12 @@ class ParsedFile:
 
 def _is_report_metadata_row(row: RawRow) -> bool:
     """Ignore the one-cell filter summary emitted by the report exporter."""
-    values = [value for value in row.cells.values() if value is not None and str(value).strip()]
+    return _is_report_metadata_values(row.cells.values())
+
+
+def _is_report_metadata_values(values: Any) -> bool:
+    """Recognise the filter summary that precedes headers in exported reports."""
+    values = [value for value in values if value is not None and str(value).strip()]
     return (
         len(values) == 1
         and isinstance(values[0], str)
@@ -137,9 +143,30 @@ def _parse_xlsx(content: bytes, filename: str) -> tuple[list[str], list[RawRow],
                 "В файле нет ни одной строки", details={"filename": filename}
             ) from None
 
+        # Browser-generated report files contain a title and a one-cell filter
+        # summary before their headers.  Treat the row after that summary as
+        # the header so an exported, selected set of columns can be imported
+        # again without manual mapping.
+        try:
+            next_row = next(iterator)
+        except StopIteration:
+            next_row = None
+        if next_row is not None and _is_report_metadata_values(next_row):
+            try:
+                header_row = next(iterator)
+            except StopIteration:
+                raise ImportInvalidFormatError(
+                    "В отчёте отсутствует строка заголовков", details={"filename": filename}
+                ) from None
+            start_row = 4
+        else:
+            start_row = 2
+
         headers = _dedupe([_normalize_header(value, i) for i, value in enumerate(header_row)])
         rows: list[RawRow] = []
-        for offset, values in enumerate(iterator, start=2):
+        if next_row is not None and start_row == 2:
+            iterator = chain((next_row,), iterator)
+        for offset, values in enumerate(iterator, start=start_row):
             cells = {
                 header: _cell_value(values[i]) if i < len(values) else None
                 for i, header in enumerate(headers)
@@ -171,11 +198,19 @@ def _parse_xls(content: bytes, filename: str) -> tuple[list[str], list[RawRow], 
             "В файле нет ни одной строки", details={"filename": filename}
         )
 
+    header_index = 0
+    if sheet.nrows > 1 and _is_report_metadata_values(sheet.row_values(1)):
+        if sheet.nrows <= 2:
+            raise ImportInvalidFormatError(
+                "В отчёте отсутствует строка заголовков", details={"filename": filename}
+            )
+        header_index = 2
+
     headers = _dedupe(
-        [_normalize_header(sheet.cell_value(0, col), col) for col in range(sheet.ncols)]
+        [_normalize_header(sheet.cell_value(header_index, col), col) for col in range(sheet.ncols)]
     )
     rows: list[RawRow] = []
-    for row_index in range(1, sheet.nrows):
+    for row_index in range(header_index + 1, sheet.nrows):
         cells: dict[str, Any] = {}
         for col, header in enumerate(headers):
             cell = sheet.cell(row_index, col)

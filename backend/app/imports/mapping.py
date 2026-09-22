@@ -45,7 +45,13 @@ INTERACTION_FIELDS: tuple[TargetField, ...] = (
     TargetField(
         path="it_products.name",
         title="ПО",
-        aliases=("ПО", "Продукт", "Программное обеспечение", "Название ПО"),
+        aliases=(
+            "ПО",
+            "Продукт",
+            "ИТ-продукт",
+            "Программное обеспечение",
+            "Название ПО",
+        ),
     ),
     TargetField(
         path="it_directions.name",
@@ -65,19 +71,36 @@ INTERACTION_FIELDS: tuple[TargetField, ...] = (
     TargetField(
         path="interactions.license_years",
         title="Срок действия лицензии (год)",
-        aliases=("Срок действия лицензии (год)", "Срок действия лицензии", "Срок лицензии"),
+        aliases=(
+            "Срок действия лицензии (год)",
+            "Срок действия лицензии",
+            "Срок лицензии",
+            "Срок, лет",
+        ),
     ),
     TargetField(
         path="interactions.transfer_status",
         title="Статус по передаче",
         # The customer's own ТЗ spells this column «Статус по передачи»; both
         # spellings occur in real files.
-        aliases=("Статус по передаче", "Статус по передачи", "Статус передачи", "Статус"),
+        aliases=(
+            "Статус по передаче",
+            "Статус по передачи",
+            "Статус передачи",
+            "Статус работы с вузом",
+            "Статус",
+        ),
     ),
     TargetField(
         path="interactions.responsible_user_id",
         title="ФИО Менеджера",
-        aliases=("ФИО Менеджера", "Менеджер", "Ответственный менеджер", "КАМ"),
+        aliases=(
+            "ФИО Менеджера",
+            "Менеджер",
+            "Ответственный менеджер",
+            "Ответственный",
+            "КАМ",
+        ),
     ),
     TargetField(
         path="university_contacts.full_name",
