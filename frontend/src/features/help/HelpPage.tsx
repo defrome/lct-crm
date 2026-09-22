@@ -228,7 +228,7 @@ function ReportsGuide() {
   );
 }
 
-function AdminGuide() {
+export function AdminGuide() {
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <GuideCard title="Перед запуском в закрытом контуре">
@@ -260,7 +260,7 @@ function AdminGuide() {
   );
 }
 
-function ArchitectureGuide() {
+export function ArchitectureGuide() {
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(20rem,.8fr)]">
       <section className="card card-pad">
