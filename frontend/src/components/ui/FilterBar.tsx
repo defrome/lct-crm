@@ -1,7 +1,6 @@
 import clsx from 'clsx';
 import { useState, type ReactNode } from 'react';
 
-import { useMediaQuery } from '@/hooks';
 import { Button } from './Button';
 import { CONTROL } from './Field';
 import { Icon } from './Icon';
@@ -32,7 +31,6 @@ export function FilterBar({
   /** Справа: переключатели вида, выгрузки. */
   trailing?: ReactNode;
 }) {
-  const isWide = useMediaQuery('(min-width: 1024px)');
   const [sheetOpen, setSheetOpen] = useState(false);
   const hasFilters = Boolean(children);
 
@@ -55,10 +53,7 @@ export function FilterBar({
         </div>
       )}
 
-      {hasFilters &&
-        (isWide ? (
-          <div className="flex min-w-0 flex-wrap items-center gap-2">{children}</div>
-        ) : (
+      {hasFilters && (
           <>
             <Button icon="filter" onClick={() => setSheetOpen(true)}>
               Фильтры
@@ -87,9 +82,9 @@ export function FilterBar({
               <div className="flex flex-col gap-3">{children}</div>
             </Modal>
           </>
-        ))}
+        )}
 
-      {isWide && activeCount > 0 && (
+      {activeCount > 0 && (
         <Button variant="ghost" scheme="accent" icon="close" onClick={onReset}>
           Сбросить
         </Button>
