@@ -59,7 +59,7 @@ function UserGuide() {
       </section>
       <figure className="card overflow-hidden">
         <img
-          src="/interaction-card-help.png"
+          src="/interaction-card-help.webp"
           alt="Карточка взаимодействия МГТУ им. Н.Э. Баумана"
           className="block h-auto w-full"
         />
