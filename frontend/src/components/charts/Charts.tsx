@@ -257,9 +257,69 @@ export function CategoryBars({
   }
 
   const max = Math.max(...data.map((datum) => datum.value), 1);
+  // Category bars are intentionally built from semantic HTML for the interactive
+  // view. Keep a compact SVG twin off-screen so ChartCard's PNG exporter can use
+  // the same export path as the SVG-based sequence chart.
+  const exportWidth = 800;
+  const rowHeight = 64;
+  const exportHeight = Math.max(rowHeight, data.length * rowHeight);
 
   return (
-    <ul className="flex flex-col gap-4">
+    <div className="relative">
+      <svg
+        data-chart-export="category-bars"
+        aria-hidden="true"
+        width={exportWidth}
+        height={exportHeight}
+        viewBox={`0 0 ${exportWidth} ${exportHeight}`}
+        style={{ position: 'absolute', left: '-100000px', top: 0 }}
+      >
+        {data.map((datum, index) => {
+          const y = index * rowHeight;
+          const barWidth = ((datum.value / max) * (exportWidth - 180));
+          return (
+            <g key={datum.key}>
+              <text
+                x="0"
+                y={y + 18}
+                fill="var(--atmr-fg-default)"
+                fontSize="16"
+                fontFamily="var(--atmr-font-family-base)"
+              >
+                {datum.name}
+              </text>
+              <text
+                x={exportWidth}
+                y={y + 18}
+                textAnchor="end"
+                fill="var(--atmr-fg-default)"
+                fontSize="16"
+                fontWeight="500"
+                fontFamily="var(--atmr-font-family-base)"
+              >
+                {datum.value}
+              </text>
+              <rect
+                x="0"
+                y={y + 30}
+                width={exportWidth}
+                height="12"
+                rx="6"
+                fill="var(--atmr-neutral-container-default)"
+              />
+              <rect
+                x="0"
+                y={y + 30}
+                width={barWidth}
+                height="12"
+                rx="6"
+                fill={tone === 'now' ? 'var(--crm-chart-now)' : 'var(--crm-chart-past)'}
+              />
+            </g>
+          );
+        })}
+      </svg>
+      <ul className="flex flex-col gap-4">
       {data.map((datum) => {
         const content = (
           <>
@@ -288,7 +348,8 @@ export function CategoryBars({
           </li>
         );
       })}
-    </ul>
+      </ul>
+    </div>
   );
 }
 
