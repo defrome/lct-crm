@@ -3,7 +3,7 @@ import { useState, type ReactNode } from 'react';
 
 import { Button } from './Button';
 import { CONTROL } from './Field';
-import { Icon } from './Icon';
+import { Icon, type IconName } from './Icon';
 import { Modal } from './Modal';
 
 /**
@@ -98,12 +98,20 @@ export function FilterBar({
 /** Фильтр в строке — уже поля формы. */
 export function FilterSlot({
   className,
+  icon,
   children,
 }: {
   className?: string;
+  /** Смысловая иконка: делает все элементы отбора визуально единообразными с периодом. */
+  icon?: IconName;
   children: ReactNode;
 }) {
-  return <div className={clsx('w-full lg:w-56', className)}>{children}</div>;
+  return (
+    <div className={clsx('flex w-full items-center gap-2 lg:w-56', className)}>
+      {icon && <Icon name={icon} className="size-6 shrink-0 text-fg-muted" />}
+      <div className="min-w-0 flex-1">{children}</div>
+    </div>
+  );
 }
 
 /** Пара дат «с — по» для отбора за период. */

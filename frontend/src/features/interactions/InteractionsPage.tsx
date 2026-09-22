@@ -207,28 +207,28 @@ export function InteractionsPage() {
             <SegmentedControl value={view} onChange={changeView} options={VIEW_OPTIONS} />
           }
         >
-          <FilterSlot>
+          <FilterSlot icon="university">
             <UniversityPicker
               value={values.university_id || null}
               onChange={(value) => set({ university_id: value })}
               placeholder="Любой вуз"
             />
           </FilterSlot>
-          <FilterSlot>
+          <FilterSlot icon="route">
             <DirectionPicker
               value={values.it_direction_id || null}
               onChange={(value) => set({ it_direction_id: value })}
               placeholder="Любое направление"
             />
           </FilterSlot>
-          <FilterSlot>
+          <FilterSlot icon="cards">
             <ProductPicker
               value={values.it_product_id || null}
               onChange={(value) => set({ it_product_id: value })}
               placeholder="Любой продукт"
             />
           </FilterSlot>
-          <FilterSlot>
+          <FilterSlot icon="users">
             <UserPicker
               value={values.responsible_user_id || null}
               onChange={(value) => set({ responsible_user_id: value })}

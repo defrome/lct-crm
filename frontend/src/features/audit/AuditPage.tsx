@@ -66,14 +66,14 @@ export function AuditPage() {
 
       <div className="mt-5">
         <FilterBar activeCount={activeCount} onReset={reset}>
-          <FilterSlot>
+          <FilterSlot icon="users">
             <UserPicker
               value={values.actor_id || null}
               onChange={(value) => set({ actor_id: value })}
               placeholder="Любой сотрудник"
             />
           </FilterSlot>
-          <FilterSlot>
+          <FilterSlot icon="filter">
             <Select
               aria-label="Тип действия"
               placeholder="Любое действие"
@@ -82,7 +82,7 @@ export function AuditPage() {
               options={Object.entries(AUDIT_LABELS).map(([value, label]) => ({ value, label }))}
             />
           </FilterSlot>
-          <FilterSlot>
+          <FilterSlot icon="cards">
             <Select
               aria-label="Объект"
               placeholder="Любой объект"
