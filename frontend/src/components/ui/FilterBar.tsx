@@ -107,7 +107,7 @@ export function FilterSlot({
   children: ReactNode;
 }) {
   return (
-    <div className={clsx('flex w-full items-center gap-2 lg:w-56', className)}>
+    <div className={clsx('flex w-full items-center gap-2', className)}>
       {icon && <Icon name={icon} className="size-6 shrink-0 text-fg-muted" />}
       <div className="min-w-0 flex-1">{children}</div>
     </div>
