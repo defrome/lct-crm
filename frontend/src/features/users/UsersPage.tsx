@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { ApiError } from '@/api/client';
 import { usersApi } from '@/api/endpoints';
@@ -28,6 +28,7 @@ export function UsersPage() {
   const { values, set, reset, activeCount } = useFilters(DEFAULTS);
   const search = useDebounced(values.q, 350);
   const [creating, setCreating] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserRead | null>(null);
   const [visibilityUser, setVisibilityUser] = useState<UserRead | null>(null);
   const [deletingUser, setDeletingUser] = useState<UserRead | null>(null);
   const toast = useToast();
@@ -64,6 +65,7 @@ export function UsersPage() {
               {row.full_name}
             </span>
             {row.email && <span className="block truncate text-desc text-fg-muted">{row.email}</span>}
+            {row.telegram_user_id && <span className="block truncate text-desc text-fg-muted">Telegram: {row.telegram_user_id}</span>}
           </span>
         </span>
       ),
@@ -74,19 +76,22 @@ export function UsersPage() {
       hideBelow: 'lg',
       render: (row) => <VisibilityBadge mode={row.visibility_mode} />,
     },
-    {
-      key: 'settings',
-      header: 'Действия',
-      align: 'center',
-      render: (row) => can('admin') ? (
-        <span className="flex justify-center gap-2">
-          {row.role === 'user' && (
-            <Button size="s" onClick={() => setVisibilityUser(row)}>Доступ</Button>
-          )}
-          <Button size="s" variant="danger" onClick={() => setDeletingUser(row)}>Удалить</Button>
-        </span>
-      ) : null,
-    },
+    ...(can('admin')
+      ? [{
+          key: 'settings',
+          header: 'Действия',
+          align: 'center' as const,
+          render: (row: UserRead) => (
+            <span className="flex justify-center gap-2">
+              {row.role === 'user' && (
+                <Button size="s" onClick={() => setVisibilityUser(row)}>Доступ</Button>
+              )}
+              <Button size="s" onClick={() => setEditingUser(row)}>Telegram</Button>
+              <Button size="s" variant="danger" onClick={() => setDeletingUser(row)}>Удалить</Button>
+            </span>
+          ),
+        } satisfies Column<UserRead>]
+      : []),
     {
       key: 'role',
       header: 'Роль',
@@ -174,6 +179,7 @@ export function UsersPage() {
                 <span className="block truncate text-desc text-fg-muted">
                   {row.email ?? <Blank />}
                 </span>
+                {row.telegram_user_id && <span className="block truncate text-desc text-fg-muted">Telegram: {row.telegram_user_id}</span>}
               </span>
               <Badge tone={ROLE_TONE[row.role]}>{ROLE_LABELS[row.role]}</Badge>
             </div>
@@ -201,6 +207,7 @@ export function UsersPage() {
       </div>
 
       <UserFormModal open={creating} onClose={() => setCreating(false)} />
+      <UserFormModal user={editingUser} open={Boolean(editingUser)} onClose={() => setEditingUser(null)} />
       <VisibilityModal key={visibilityUser?.id ?? 'none'} user={visibilityUser} onClose={() => setVisibilityUser(null)} />
       <ConfirmModal
         open={Boolean(deletingUser)}
@@ -329,29 +336,51 @@ function VisibilityModal({ user, onClose }: { user: UserRead | null; onClose: ()
   );
 }
 
-function UserFormModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+function UserFormModal({ user = null, open, onClose }: { user?: UserRead | null; open: boolean; onClose: () => void }) {
   const toast = useToast();
   const client = useQueryClient();
   const [keycloakId, setKeycloakId] = useState('');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [telegramUserId, setTelegramUserId] = useState('');
   const [role, setRole] = useState<UserRole>('user');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
+  useEffect(() => {
+    if (user) {
+      setKeycloakId(user.keycloak_id);
+      setFullName(user.full_name);
+      setEmail(user.email ?? '');
+      setTelegramUserId(user.telegram_user_id ?? '');
+      setRole(user.role);
+    } else if (open) {
+      setKeycloakId('');
+      setFullName('');
+      setEmail('');
+      setTelegramUserId('');
+      setRole('user');
+    }
+    setFieldErrors({});
+  }, [user, open]);
+
   const save = useMutation({
     mutationFn: () =>
-      usersApi.create({
-        keycloak_id: keycloakId.trim(),
-        full_name: fullName.trim(),
-        email: email.trim() || null,
-        role,
-      }),
+      user
+        ? usersApi.update(user.id, { telegram_user_id: telegramUserId.trim() || null })
+        : usersApi.create({
+            keycloak_id: keycloakId.trim(),
+            full_name: fullName.trim(),
+            email: email.trim() || null,
+            telegram_user_id: telegramUserId.trim() || null,
+            role,
+          }),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ['users'] });
       toast.notify('Сотрудник заведён');
       setKeycloakId('');
       setFullName('');
       setEmail('');
+      setTelegramUserId('');
       setRole('user');
       onClose();
     },
@@ -365,7 +394,7 @@ function UserFormModal({ open, onClose }: { open: boolean; onClose: () => void }
     <Modal
       open={open}
       onClose={onClose}
-      title="Завести сотрудника вручную"
+      title={user ? 'Telegram ID сотрудника' : 'Завести сотрудника вручную'}
       description="Обычно запись создаётся сама при первом входе — это запасной путь"
       footer={
         <>
@@ -378,7 +407,7 @@ function UserFormModal({ open, onClose }: { open: boolean; onClose: () => void }
             disabled={!keycloakId.trim() || !fullName.trim()}
             onClick={() => save.mutate()}
           >
-            Завести
+            {user ? 'Сохранить' : 'Завести'}
           </Button>
         </>
       }
@@ -408,6 +437,14 @@ function UserFormModal({ open, onClose }: { open: boolean; onClose: () => void }
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           error={fieldErrors.email}
+        />
+        <TextInput
+          label="Telegram ID"
+          mono
+          hint="Числовой ID пользователя Telegram для личных напоминаний"
+          value={telegramUserId}
+          onChange={(event) => setTelegramUserId(event.target.value)}
+          error={fieldErrors.telegram_user_id}
         />
         <Select
           label="Роль"
