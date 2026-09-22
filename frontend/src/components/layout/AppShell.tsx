@@ -61,10 +61,10 @@ export function AppShell() {
         {isDesktop && (
           <aside
             aria-label="Инструменты"
-            className="sticky top-4 z-[1100] box-content flex h-[calc(100dvh-6rem)] w-12 shrink-0 flex-col items-center gap-3 py-8 pl-8"
+            className="group/rail sticky top-4 z-[1100] box-content flex h-[calc(100dvh-6rem)] w-12 shrink-0 flex-col items-center gap-3 overflow-visible py-8 pl-8 transition-[width] duration-300 ease-productive-entrance hover:w-64 focus-within:w-64"
           >
             <BrandMark />
-            <nav className="mt-10 flex flex-col gap-3">
+            <nav className="mt-10 flex w-full flex-col gap-3">
               {allowed(TOOL_NAV).map((item) => (
                 <RailLink key={item.to} item={item} />
               ))}
@@ -150,18 +150,19 @@ function RailLink({ item }: { item: NavItem }) {
   const current = Boolean(exact || nested);
 
   return (
-    <Tooltip label={item.label} side="right">
       <NavLink
         to={item.to}
         aria-label={item.label}
         className={clsx(
-          'grid size-12 place-items-center rounded-m transition-[background-color,transform] duration-150 ease-productive active:scale-[.94]',
+          'flex h-12 w-full items-center justify-center gap-3 overflow-hidden rounded-m px-3 transition-[background-color,transform,justify-content] duration-150 ease-productive active:scale-[.94] group-hover/rail:justify-start',
           current ? 'bg-accent text-white hover:bg-accent-hover' : 'text-fg hover:bg-neutral-container',
         )}
       >
-        <Icon name={item.icon} className="size-6" />
+        <Icon name={item.icon} className="size-6 shrink-0" />
+        <span className="max-w-0 overflow-hidden whitespace-nowrap text-body-m opacity-0 transition-[max-width,opacity] duration-200 ease-productive-exit group-hover/rail:max-w-[180px] group-hover/rail:opacity-100 group-focus-within/rail:max-w-[180px] group-focus-within/rail:opacity-100">
+          {item.label}
+        </span>
       </NavLink>
-    </Tooltip>
   );
 }
 
