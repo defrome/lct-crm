@@ -216,5 +216,8 @@ export function useAudit(params: AuditQuery = {}) {
     queryKey: qk.audit(params),
     queryFn: () => auditApi.list(params),
     placeholderData: (previous) => previous,
+    // Audit entries are append-only and can be created by another user while
+    // the administrator keeps this page open.
+    refetchInterval: 15_000,
   });
 }

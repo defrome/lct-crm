@@ -191,8 +191,51 @@ export const FIELD_LABELS: Record<string, string> = {
   interaction_id: 'Карточка',
   attempts: 'Попытки',
   sent_at: 'Отправлено',
-  error_message: 'Ошибка доставки',
+  error_message: 'Сообщение об ошибке',
   payload: 'Данные уведомления',
+  // Import and integration audit fields.
+  storage_key: 'Ключ хранения',
+  target: 'Объект импорта',
+  mapping: 'Сопоставление',
+  stats: 'Статистика',
+  source_headers: 'Заголовки исходного файла',
+  file_hash: 'Хеш файла',
+  committed_at: 'Дата завершения',
+  returned: 'Возвращено',
+  total: 'Всего',
+  to_create: 'К созданию',
+  to_update: 'К обновлению',
+  created: 'Создано',
+  updated: 'Обновлено',
+  skipped: 'Пропущено',
+  errors: 'Ошибки',
+  warnings: 'Предупреждения',
+  mode: 'Режим',
+  source: 'Источник',
+  finished_at: 'Дата завершения',
+  dry_run: 'Пробный запуск',
+  messages: 'Сообщения',
+  external_id: 'Внешний идентификатор',
+  telegram_user_id: 'Идентификатор Telegram',
+  counterparty_group: 'Сегмент',
+  file_format: 'Формат файла',
+  content_type: 'Тип содержимого',
+  size_bytes: 'Размер файла, байт',
+  dedupe_key: 'Ключ дедупликации',
+  kind: 'Тип',
+  federal_project: 'Федеральный проект',
+  starts_at: 'Начало',
+  ends_at: 'Окончание',
+  published_at: 'Дата публикации',
+  version: 'Версия',
+  order_index: 'Порядок',
+  is_initial: 'Начальный',
+  is_terminal: 'Конечный',
+  is_final_success: 'Успешное завершение',
+  requires_comment: 'Требуется комментарий',
+  masked: 'Скрыто',
+  old_sha256: 'SHA-256 (старое значение)',
+  new_sha256: 'SHA-256 (новое значение)',
 };
 
 const AUDIT_VALUE_LABELS: Record<string, Record<string, string>> = {
@@ -204,6 +247,42 @@ const AUDIT_VALUE_LABELS: Record<string, Record<string, string>> = {
     user: 'Пользователь',
   },
   is_enabled: { true: 'Да', false: 'Нет' },
+  visibility_mode: {
+    all: 'Все',
+    assignments: 'Назначения',
+    selected: 'Выбранные',
+  },
+  target: {
+    interactions: 'Взаимодействия',
+    universities: 'Вузы',
+    it_products: 'ИТ-продукты',
+    contacts: 'Контакты вузов',
+  },
+  status: {
+    pending: 'Ожидает',
+    validated: 'Проверено',
+    committed: 'Завершено',
+    cancelled: 'Отменено',
+    failed: 'Ошибка',
+    ok: 'Успешно',
+    warning: 'Предупреждение',
+    error: 'Ошибка',
+    draft: 'Черновик',
+    published: 'Опубликовано',
+    archived: 'Архивировано',
+    queued: 'В очереди',
+    sent: 'Отправлено',
+    running: 'Выполняется',
+    succeeded: 'Успешно',
+  },
+  role: {
+    user: 'КАМ',
+    manager: 'Руководитель',
+    admin: 'Администратор',
+  },
+  counterparty_group: { b2b: 'B2B', b2c: 'B2C' },
+  mode: { fixture: 'Тестовые данные', http: 'HTTP' },
+  source: { lms: 'LMS', website: 'Сайт' },
 };
 
 export function fieldLabel(field: string): string {
@@ -211,8 +290,30 @@ export function fieldLabel(field: string): string {
 }
 
 export function auditValueLabel(field: string, value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => auditValueLabel(field, item));
+  }
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => {
+        // Mapping keys are user-provided spreadsheet headers and should remain
+        // intact; only the destination paths are translated.
+        const label = field === 'mapping' ? key : fieldLabel(key);
+        const childField = field === 'mapping' ? 'mapping_target' : key;
+        return [label, auditValueLabel(childField, item)];
+      }),
+    );
+  }
+  if (typeof value === 'boolean') return value ? 'Да' : 'Нет';
   if (typeof value !== 'string') return value;
+  if (field === 'mapping_target') return mappingTargetLabel(value);
   return AUDIT_VALUE_LABELS[field]?.[value] ?? value;
+}
+
+function mappingTargetLabel(value: string): string {
+  const [entity, field] = value.split('.', 2);
+  if (!entity || !field) return value;
+  return `${entityLabel(entity)} · ${fieldLabel(field)}`;
 }
 
 /**
