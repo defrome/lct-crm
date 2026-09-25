@@ -102,6 +102,10 @@ export const IMPORT_TARGET_LABELS: Record<ImportTarget, string> = {
   universities: 'Вузы',
   it_products: 'ИТ-продукты',
   contacts: 'Контакты вузов',
+  vendors: 'Вендоры',
+  vendor_contacts: 'Контакты вендоров',
+  learners: 'Слушатели',
+  applications: 'Заявки на обучение',
 };
 
 /** Entity table names as they appear in the audit log. */

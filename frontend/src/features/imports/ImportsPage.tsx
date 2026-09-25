@@ -203,7 +203,7 @@ export function ImportsPage() {
             <EmptyState
               icon="import"
               title="Импортов пока не было"
-              message="Загрузите .xlsx с вузами, продуктами или взаимодействиями — система покажет, что изменится, до записи."
+              message="Загрузите .xlsx, .xls или .json — система покажет, что изменится, до записи."
               action={
                 <Button variant="primary" icon="import" onClick={() => navigate('/imports/new')}>
                   Загрузить файл

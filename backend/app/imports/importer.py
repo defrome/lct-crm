@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from dataclasses import field as dataclass_field
 from typing import Any
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.access import AccessScope
@@ -48,8 +49,10 @@ from app.models.enums import (
     ImportTarget,
 )
 from app.models.import_job import ImportJob, ImportMappingPreset, ImportRow
+from app.models.learner import Learner, TrainingApplication
 from app.models.university import University
 from app.models.user import User
+from app.models.vendor_contact import VendorContact
 from app.repositories.import_job import (
     ImportJobRepository,
     ImportMappingPresetRepository,
@@ -344,6 +347,10 @@ class ImportService:
             ImportTarget.UNIVERSITIES: self._validate_university_row,
             ImportTarget.IT_PRODUCTS: self._validate_product_row,
             ImportTarget.CONTACTS: self._validate_contact_row,
+            ImportTarget.VENDORS: self._validate_vendor_row,
+            ImportTarget.VENDOR_CONTACTS: self._validate_vendor_contact_row,
+            ImportTarget.LEARNERS: self._validate_learner_row,
+            ImportTarget.APPLICATIONS: self._validate_application_row,
         }
         return await handlers[target](row, mapping, cache)
 
@@ -495,6 +502,100 @@ class ImportService:
             )
             if existing is not None:
                 parsed["existing_entity_id"] = str(existing.id)
+        return parsed, messages
+
+    async def _validate_vendor_row(
+        self, row: ImportRow, mapping: dict[str, str], _cache: _ValidationCache
+    ):
+        messages: list[RowMessage] = []
+        parsed: dict[str, Any] = {}
+        for path in (
+            "vendors.name",
+            "it_products.name",
+            "vendor_contacts.full_name",
+            "vendor_contacts.phone",
+            "vendor_contacts.email",
+            "vendor_contacts.communication_method",
+        ):
+            value, message = (
+                parse_email(self._cell(row, mapping, path), path)
+                if path.endswith("email")
+                else parse_text(self._cell(row, mapping, path), path, max_length=1000)
+            )
+            _append(messages, message)
+            parsed[path.replace(".", "_")] = value
+        if not parsed.get("vendors_name"):
+            messages.append(error("Не заполнено название компании", "vendors.name"))
+        parsed["existing_entity_id"] = None
+        parsed["dedupe_key"] = normalize_name(parsed.get("vendors_name") or "")
+        return parsed, messages
+
+    async def _validate_vendor_contact_row(
+        self, row: ImportRow, mapping: dict[str, str], cache: _ValidationCache
+    ):
+        return await self._validate_vendor_row(row, mapping, cache)
+
+    async def _validate_learner_row(
+        self, row: ImportRow, mapping: dict[str, str], _cache: _ValidationCache
+    ):
+        messages: list[RowMessage] = []
+        parsed: dict[str, Any] = {}
+        date_fields = {
+            "learners.passport_issue_date",
+            "learners.birth_date",
+            "learners.diploma_issue_date",
+        }
+        for field in mapping_module.fields_for(ImportTarget.LEARNERS):
+            value = self._cell(row, mapping, field.path)
+            key = field.path.split(".", 1)[1]
+            if field.path in date_fields:
+                parsed_value, message = parse_date(value, field.path)
+                parsed[key] = parsed_value.isoformat() if parsed_value else None
+            else:
+                parsed[key], message = (
+                    parse_email(value, field.path)
+                    if key == "email"
+                    else parse_text(value, field.path, max_length=1000)
+                )
+            _append(messages, message)
+        for key in ("last_name", "first_name"):
+            if not parsed.get(key):
+                messages.append(error(f"Не заполнено обязательное поле {key}", f"learners.{key}"))
+        parsed["existing_entity_id"] = None
+        parsed["dedupe_key"] = "|".join(
+            normalize_name(parsed.get(k) or "") for k in ("last_name", "first_name", "middle_name")
+        )
+        return parsed, messages
+
+    async def _validate_application_row(
+        self, row: ImportRow, mapping: dict[str, str], _cache: _ValidationCache
+    ):
+        messages: list[RowMessage] = []
+        parsed: dict[str, Any] = {}
+        for field in mapping_module.fields_for(ImportTarget.APPLICATIONS):
+            value = self._cell(row, mapping, field.path)
+            key = field.path.split(".", 1)[1]
+            if key == "stream_number":
+                try:
+                    parsed[key] = int(str(value).strip()) if value not in (None, "") else None
+                except ValueError:
+                    parsed[key] = None
+                    messages.append(
+                        warning(f"Номер потока «{value}» не является целым числом", field.path)
+                    )
+            elif key == "email":
+                parsed[key], message = parse_email(value, field.path)
+                _append(messages, message)
+            else:
+                parsed[key], message = parse_text(value, field.path, max_length=1000)
+                _append(messages, message)
+        for key in ("order_number", "course", "last_name", "first_name"):
+            if not parsed.get(key):
+                messages.append(
+                    error(f"Не заполнено обязательное поле {key}", f"applications.{key}")
+                )
+        parsed["existing_entity_id"] = None
+        parsed["dedupe_key"] = normalize_name(parsed.get("order_number") or "")
         return parsed, messages
 
     async def _find_existing_interaction(
@@ -677,6 +778,10 @@ class ImportService:
             ImportTarget.UNIVERSITIES: self._commit_university_row,
             ImportTarget.IT_PRODUCTS: self._commit_product_row,
             ImportTarget.CONTACTS: self._commit_contact_row,
+            ImportTarget.VENDORS: self._commit_vendor_row,
+            ImportTarget.VENDOR_CONTACTS: self._commit_vendor_contact_row,
+            ImportTarget.LEARNERS: self._commit_learner_row,
+            ImportTarget.APPLICATIONS: self._commit_application_row,
         }
         handler = handlers[job.target]
 
@@ -817,6 +922,130 @@ class ImportService:
                 setattr(contact, field, value)
         await self.session.flush()
         return contact.id, created
+
+    async def _commit_vendor_row(self, row: ImportRow) -> tuple[uuid.UUID, bool]:
+        data = row.parsed_data
+        vendor, created = await self.vendors.find_or_create(data["vendors_name"])
+        for product_name in split_multi_value(data.get("it_products_name")):
+            await self.products.find_or_create(product_name, vendor_id=vendor.id)
+        await self._upsert_vendor_contact(vendor.id, data)
+        return vendor.id, created
+
+    async def _commit_vendor_contact_row(self, row: ImportRow) -> tuple[uuid.UUID, bool]:
+        data = row.parsed_data
+        vendor, _ = await self.vendors.find_or_create(data["vendors_name"])
+        contact, created = await self._upsert_vendor_contact(vendor.id, data)
+        return contact.id, created
+
+    async def _upsert_vendor_contact(
+        self, vendor_id: uuid.UUID, data: dict[str, Any]
+    ) -> tuple[VendorContact, bool]:
+        name = data.get("vendor_contacts_full_name")
+        if not name:
+            existing = await self.session.scalar(
+                select(VendorContact).where(
+                    VendorContact.vendor_id == vendor_id,
+                    VendorContact.deleted_at.is_(None),
+                )
+            )
+            if existing is None:
+                existing = VendorContact(vendor_id=vendor_id, full_name="Не указан")
+                self.session.add(existing)
+                await self.session.flush()
+                return existing, True
+            return existing, False
+        contact = await self.session.scalar(
+            select(VendorContact).where(
+                VendorContact.vendor_id == vendor_id,
+                VendorContact.full_name == name,
+                VendorContact.deleted_at.is_(None),
+            )
+        )
+        created = contact is None
+        if contact is None:
+            contact = VendorContact(vendor_id=vendor_id, full_name=name)
+            self.session.add(contact)
+        for field, key in (
+            ("phone", "vendor_contacts_phone"),
+            ("email", "vendor_contacts_email"),
+            ("communication_method", "vendor_contacts_communication_method"),
+        ):
+            if data.get(key) is not None:
+                setattr(contact, field, data[key])
+        await self.session.flush()
+        return contact, created
+
+    async def _commit_learner_row(self, row: ImportRow) -> tuple[uuid.UUID, bool]:
+        data = row.parsed_data
+        learner = await self.session.scalar(
+            select(Learner).where(
+                Learner.last_name == data["last_name"],
+                Learner.first_name == data["first_name"],
+                Learner.middle_name == data.get("middle_name"),
+                Learner.deleted_at.is_(None),
+            )
+        )
+        created = learner is None
+        if learner is None:
+            learner = Learner(last_name=data["last_name"], first_name=data["first_name"])
+            self.session.add(learner)
+        for field in mapping_module.fields_for(ImportTarget.LEARNERS):
+            key = field.path.split(".", 1)[1]
+            if key not in {"last_name", "first_name"} and data.get(key) is not None:
+                setattr(learner, key, _as_date(data[key]) if key.endswith("date") else data[key])
+        await self.session.flush()
+        return learner.id, created
+
+    async def _commit_application_row(self, row: ImportRow) -> tuple[uuid.UUID, bool]:
+        data = row.parsed_data
+        learner = await self.session.scalar(
+            select(Learner).where(
+                Learner.last_name == data["last_name"],
+                Learner.first_name == data["first_name"],
+                Learner.middle_name == data.get("middle_name"),
+                Learner.deleted_at.is_(None),
+            )
+        )
+        if learner is None:
+            learner = Learner(
+                last_name=data["last_name"],
+                first_name=data["first_name"],
+                middle_name=data.get("middle_name"),
+                phone=data.get("phone"),
+                email=data.get("email"),
+            )
+            self.session.add(learner)
+            await self.session.flush()
+        application = await self.session.scalar(
+            select(TrainingApplication).where(
+                TrainingApplication.order_number == data["order_number"],
+                TrainingApplication.deleted_at.is_(None),
+            )
+        )
+        created = application is None
+        if application is None:
+            application = TrainingApplication(
+                order_number=data["order_number"],
+                course=data["course"],
+                last_name=data["last_name"],
+                first_name=data["first_name"],
+                learner_id=learner.id,
+            )
+            self.session.add(application)
+        for key in (
+            "course",
+            "last_name",
+            "first_name",
+            "middle_name",
+            "phone",
+            "email",
+            "stream_number",
+        ):
+            if data.get(key) is not None:
+                setattr(application, key, data[key])
+        application.learner_id = learner.id
+        await self.session.flush()
+        return application.id, created
 
     # -- listings -----------------------------------------------------------
 

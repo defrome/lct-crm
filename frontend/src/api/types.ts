@@ -527,7 +527,7 @@ export interface AttachmentRead {
 
 // --- Импорт -----------------------------------------------------------------
 
-export type ImportTarget = 'universities' | 'it_products' | 'interactions' | 'contacts';
+export type ImportTarget = 'universities' | 'it_products' | 'interactions' | 'contacts' | 'vendors' | 'vendor_contacts' | 'learners' | 'applications';
 export type ImportJobStatus = 'pending' | 'validated' | 'committed' | 'failed' | 'cancelled';
 export type ImportRowStatus = 'ok' | 'warning' | 'error';
 

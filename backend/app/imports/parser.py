@@ -10,6 +10,7 @@ from __future__ import annotations
 import datetime as dt
 import hashlib
 import io
+import json
 import re
 import zipfile
 from dataclasses import dataclass, field
@@ -21,7 +22,7 @@ from openpyxl import load_workbook
 from app.core.config import settings
 from app.core.errors import ImportFileTooLargeError, ImportInvalidFormatError
 
-FileFormat = Literal["xlsx", "xls"]
+FileFormat = Literal["xlsx", "xls", "json"]
 
 # Magic numbers. The client-supplied filename and Content-Type are not trusted
 # (SPEC §6 step 1: "реальный MIME по сигнатуре файла").
@@ -88,6 +89,14 @@ def detect_format(content: bytes, filename: str) -> FileFormat:
             ) from None
         if "xl/workbook.xml" in names:
             return "xlsx"
+    if filename.lower().endswith(".json") or content.lstrip()[:1] in {b"[", b"{"}:
+        try:
+            json.loads(content.decode("utf-8-sig"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            raise ImportInvalidFormatError(
+                "Файл не является корректным JSON", details={"filename": filename}
+            ) from None
+        return "json"
     raise ImportInvalidFormatError(
         "Файл не является корректной таблицей Excel",
         details={"filename": filename},
@@ -257,7 +266,9 @@ def parse_file(content: bytes, filename: str) -> ParsedFile:
         raise ImportInvalidFormatError("Файл пуст", details={"filename": filename})
 
     file_format = detect_format(content, filename)
-    if file_format == "xlsx":
+    if file_format == "json":
+        headers, rows, sheet_name = _parse_json(content, filename)
+    elif file_format == "xlsx":
         headers, rows, sheet_name = _parse_xlsx(content, filename)
     else:
         headers, rows, sheet_name = _parse_xls(content, filename)
@@ -280,3 +291,33 @@ def parse_file(content: bytes, filename: str) -> ParsedFile:
         file_format=file_format,
         sheet_name=sheet_name,
     )
+
+
+def _parse_json(content: bytes, filename: str) -> tuple[list[str], list[RawRow], str]:
+    try:
+        payload = json.loads(content.decode("utf-8-sig"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        raise ImportInvalidFormatError(
+            "Не удалось прочитать JSON", details={"filename": filename}
+        ) from None
+    if not isinstance(payload, list):
+        raise ImportInvalidFormatError(
+            "JSON должен содержать массив записей", details={"filename": filename}
+        )
+    records = [
+        (index, item) for index, item in enumerate(payload, start=1) if isinstance(item, dict)
+    ]
+    if not records:
+        raise ImportInvalidFormatError("В JSON нет записей", details={"filename": filename})
+    headers: list[str] = []
+    for _, item in records:
+        for key in item:
+            if key not in headers:
+                headers.append(str(key))
+    rows = [
+        RawRow(
+            row_number=index, cells={header: _cell_value(item.get(header)) for header in headers}
+        )
+        for index, item in records
+    ]
+    return headers, rows, filename

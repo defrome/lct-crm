@@ -172,11 +172,80 @@ CONTACT_FIELDS: tuple[TargetField, ...] = (
     ),
 )
 
+VENDOR_FIELDS: tuple[TargetField, ...] = (
+    TargetField("vendors.name", "Компания", ("Компания", "Вендор"), True),
+    TargetField("it_products.name", "Продукт", ("Продукт", "ПО")),
+    TargetField("vendor_contacts.full_name", "ФИО", ("ФИО",)),
+    TargetField("vendor_contacts.phone", "Телефон", ("Телефон",)),
+    TargetField("vendor_contacts.email", "Почта", ("Почта", "Email")),
+    TargetField("vendor_contacts.communication_method", "Способ связи", ("Способ связи",)),
+)
+
+VENDOR_CONTACT_FIELDS = tuple(
+    field
+    for field in VENDOR_FIELDS
+    if field.path.startswith("vendors.") or field.path.startswith("vendor_contacts.")
+)
+
+LEARNER_FIELDS: tuple[TargetField, ...] = tuple(
+    TargetField(path, title, (title,), required=required)
+    for path, title, required in (
+        ("learners.last_name", "Фамилия", True),
+        ("learners.first_name", "Имя", True),
+        ("learners.middle_name", "Отчествопри наличии)", False),
+        ("learners.phone", "Номер телефона", False),
+        ("learners.email", "Email", False),
+        ("learners.snils", "СНИЛС", False),
+        ("learners.passport_series", "Серия паспорта", False),
+        ("learners.passport_number", "Номер паспорта", False),
+        ("learners.passport_issued_by", "Кем выдан паспорт", False),
+        ("learners.passport_issue_date", "Дата выдачи паспорта", False),
+        ("learners.department_code", "Код подразделения", False),
+        ("learners.gender", "Пол", False),
+        ("learners.birth_date", "Дата рождения", False),
+        ("learners.registration_region", "Регион регистрации", False),
+        ("learners.registration_locality", "Населенный пункт регистрации", False),
+        ("learners.registration_street", "Улица регистрации", False),
+        ("learners.registration_house", "Дом регистрации", False),
+        ("learners.registration_apartment", "Квартира регистрации", False),
+        ("learners.registration_postal_code", "Индекс регистрации", False),
+        ("learners.education_first_name", "Имядательный падеж)", False),
+        ("learners.education_last_name", "Фамилиядательный падеж)", False),
+        ("learners.education_middle_name", "Отчестводательный падеж)", False),
+        ("learners.education", "Образование", False),
+        ("learners.diploma_profession", "Профессия по диплому", False),
+        ("learners.diploma_institution", "Учебное заведение по диплому", False),
+        ("learners.diploma_last_name", "Фамилия, указанная в дипломе", False),
+        ("learners.diploma_number", "Номер диплома", False),
+        ("learners.diploma_series", "Серия диплома", False),
+        ("learners.diploma_registration_number", "Регистрационный номер диплома", False),
+        ("learners.diploma_issue_date", "Дата выдачи диплома", False),
+    )
+)
+
+APPLICATION_FIELDS: tuple[TargetField, ...] = tuple(
+    TargetField(path, title, (title,), required=required)
+    for path, title, required in (
+        ("applications.order_number", "Номер заявки", True),
+        ("applications.course", "Курс", True),
+        ("applications.last_name", "Фамилия", True),
+        ("applications.first_name", "Имя", True),
+        ("applications.middle_name", "Отчество", False),
+        ("applications.phone", "Телефон", False),
+        ("applications.email", "Email", False),
+        ("applications.stream_number", "Номер потока", False),
+    )
+)
+
 FIELDS_BY_TARGET: dict[ImportTarget, tuple[TargetField, ...]] = {
     ImportTarget.INTERACTIONS: INTERACTION_FIELDS,
     ImportTarget.UNIVERSITIES: UNIVERSITY_FIELDS,
     ImportTarget.IT_PRODUCTS: IT_PRODUCT_FIELDS,
     ImportTarget.CONTACTS: CONTACT_FIELDS,
+    ImportTarget.VENDORS: VENDOR_FIELDS,
+    ImportTarget.VENDOR_CONTACTS: VENDOR_CONTACT_FIELDS,
+    ImportTarget.LEARNERS: LEARNER_FIELDS,
+    ImportTarget.APPLICATIONS: APPLICATION_FIELDS,
 }
 
 # Below this score a fuzzy header match is not offered at all: a wrong

@@ -76,7 +76,7 @@ export function ImportWizardPage() {
         meta={
           job.data
             ? TARGET_OPTIONS.find((option) => option.value === job.data!.target)?.label
-            : 'Файл .xlsx или .xls — данные попадут в базу только после вашего подтверждения'
+            : 'Файл .xlsx, .xls или .json — данные попадут в базу только после вашего подтверждения'
         }
       />
 
@@ -214,7 +214,7 @@ function UploadStep({ onUploaded }: { onUploaded: (result: ImportJobCreated) => 
           ) : (
             <>
               <p className="text-body-s text-fg">Перетащите файл сюда</p>
-              <p className="text-desc text-fg-muted">.xlsx или .xls, до 20 МБ</p>
+              <p className="text-desc text-fg-muted">.xlsx, .xls или .json, до 20 МБ</p>
               <Button size="m" onClick={() => inputRef.current?.click()}>
                 Выбрать файл
               </Button>
@@ -223,7 +223,7 @@ function UploadStep({ onUploaded }: { onUploaded: (result: ImportJobCreated) => 
           <input
             ref={inputRef}
             type="file"
-            accept=".xlsx,.xls"
+              accept=".xlsx,.xls,.json"
             className="sr-only"
             onChange={(event) => setFile(event.target.files?.[0] ?? null)}
           />

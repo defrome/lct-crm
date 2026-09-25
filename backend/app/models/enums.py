@@ -24,6 +24,10 @@ class ImportTarget(StrEnum):
     IT_PRODUCTS = "it_products"
     INTERACTIONS = "interactions"
     CONTACTS = "contacts"
+    VENDORS = "vendors"
+    VENDOR_CONTACTS = "vendor_contacts"
+    LEARNERS = "learners"
+    APPLICATIONS = "applications"
 
 
 class ImportJobStatus(StrEnum):

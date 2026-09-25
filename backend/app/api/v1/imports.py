@@ -72,7 +72,7 @@ JOB_STATE_ERRORS = error_responses(
     status_code=status.HTTP_201_CREATED,
     summary="Шаг 1. Загрузить файл каталога",
     description=(
-        "Принимает `.xlsx` или `.xls`.\n\n"
+        "Принимает `.xlsx`, `.xls` или `.json`.\n\n"
         "Проверки: реальный формат определяется по сигнатуре файла (имя и "
         "`Content-Type` не используются), размер ≤ 20 МБ, в файле есть хотя бы "
         "одна непустая строка данных.\n\n"
@@ -86,7 +86,7 @@ JOB_STATE_ERRORS = error_responses(
 async def upload_import(
     session: SessionDep,
     scope: ScopeDep,
-    file: Annotated[UploadFile, File(description="Файл каталога .xlsx или .xls")],
+    file: Annotated[UploadFile, File(description="Файл каталога .xlsx, .xls или .json")],
     target: Annotated[
         ImportTarget,
         Form(description="Что импортируем: взаимодействия, вузы, ПО или контакты"),
