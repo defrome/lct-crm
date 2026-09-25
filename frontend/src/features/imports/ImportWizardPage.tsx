@@ -828,6 +828,7 @@ function StatBox({
 function ReportStep({ job }: { job: ImportJobRead }) {
   const toast = useToast();
   const stats = job.stats ?? {};
+  const destination = IMPORT_DESTINATIONS[job.target];
 
   const download = useMutation({
     mutationFn: () => importsApi.report(job.id),
@@ -857,8 +858,8 @@ function ReportStep({ job }: { job: ImportJobRead }) {
           >
             Скачать отчёт (xlsx)
           </Button>
-          <Link to="/interactions">
-            <Button iconAfter="arrowRight">Перейти к взаимодействиям</Button>
+          <Link to={destination.to}>
+            <Button iconAfter="arrowRight">{destination.label}</Button>
           </Link>
         </div>
       </div>
@@ -872,4 +873,16 @@ function ReportStep({ job }: { job: ImportJobRead }) {
     </div>
   );
 }
+
+/** The relevant catalogue screen to open after a successful import. */
+const IMPORT_DESTINATIONS: Record<ImportTarget, { to: string; label: string }> = {
+  interactions: { to: '/interactions', label: 'Перейти к взаимодействиям' },
+  universities: { to: '/universities', label: 'Перейти к вузам' },
+  it_products: { to: '/catalogs/products', label: 'Перейти к ИТ-продуктам' },
+  contacts: { to: '/catalogs/contacts', label: 'Перейти к контактам вузов' },
+  vendors: { to: '/catalogs/vendors', label: 'Перейти к вендорам' },
+  vendor_contacts: { to: '/catalogs/vendors', label: 'Перейти к контактам вендоров' },
+  learners: { to: '/imports', label: 'Перейти к истории импортов' },
+  applications: { to: '/imports', label: 'Перейти к истории импортов' },
+};
 
