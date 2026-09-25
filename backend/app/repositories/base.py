@@ -22,7 +22,7 @@ from app.models.university import UniversityAssignment
 from app.models.user import UserVisibilityUniversity
 
 
-def visible_university_ids(scope: AccessScope) -> Select[tuple[uuid.UUID]]:
+def visible_university_ids(scope: AccessScope) -> Select[Any]:
     """Universities the scope's user is currently assigned to.
 
     "Currently" means today falls inside `[assigned_from, assigned_to)`, with

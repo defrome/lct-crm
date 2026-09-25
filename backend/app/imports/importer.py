@@ -506,7 +506,7 @@ class ImportService:
 
     async def _validate_vendor_row(
         self, row: ImportRow, mapping: dict[str, str], _cache: _ValidationCache
-    ):
+    ) -> tuple[dict[str, Any], list[RowMessage]]:
         messages: list[RowMessage] = []
         parsed: dict[str, Any] = {}
         for path in (
@@ -532,12 +532,12 @@ class ImportService:
 
     async def _validate_vendor_contact_row(
         self, row: ImportRow, mapping: dict[str, str], cache: _ValidationCache
-    ):
+    ) -> tuple[dict[str, Any], list[RowMessage]]:
         return await self._validate_vendor_row(row, mapping, cache)
 
     async def _validate_learner_row(
         self, row: ImportRow, mapping: dict[str, str], _cache: _ValidationCache
-    ):
+    ) -> tuple[dict[str, Any], list[RowMessage]]:
         messages: list[RowMessage] = []
         parsed: dict[str, Any] = {}
         date_fields = {
@@ -569,7 +569,7 @@ class ImportService:
 
     async def _validate_application_row(
         self, row: ImportRow, mapping: dict[str, str], _cache: _ValidationCache
-    ):
+    ) -> tuple[dict[str, Any], list[RowMessage]]:
         messages: list[RowMessage] = []
         parsed: dict[str, Any] = {}
         for field in mapping_module.fields_for(ImportTarget.APPLICATIONS):
