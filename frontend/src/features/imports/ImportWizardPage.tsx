@@ -685,7 +685,7 @@ function RowPreview({
     ([, value]) => value !== null && value !== undefined && String(value).trim() !== '',
   );
   const parsedFields = Object.entries(mapping)
-    .map(([, path]) => {
+    .map(([column, path]) => {
       const value = parsedValue(row.parsed_data, path);
       return { column, path, value };
     })
