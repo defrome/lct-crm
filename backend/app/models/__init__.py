@@ -29,9 +29,9 @@ from app.models.integration import IntegrationSyncRun
 from app.models.interaction import Interaction
 from app.models.learner import Learner, TrainingApplication
 from app.models.product import ITDirection, ITProduct, ITProductDirection, Vendor
-from app.models.vendor_contact import VendorContact
 from app.models.university import University, UniversityAssignment, UniversityContact
 from app.models.user import User, UserVisibilityUniversity
+from app.models.vendor_contact import VendorContact
 from app.models.workflow import (
     InteractionStageHistory,
     Workflow,
@@ -67,11 +67,11 @@ __all__ = [
     "IntegrationSyncRun",
     "IntegrationSyncStatus",
     "Interaction",
-    "Learner",
-    "TrainingApplication",
     "InteractionStageHistory",
+    "Learner",
     "NotificationDelivery",
     "NotificationRule",
+    "TrainingApplication",
     "University",
     "UniversityAssignment",
     "UniversityContact",

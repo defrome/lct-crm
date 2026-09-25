@@ -82,10 +82,16 @@ const VENDOR_FIELDS: TargetField[] = [
 ];
 const LEARNER_FIELDS: TargetField[] = [
   ['last_name','Фамилия',true], ['first_name','Имя',true], ['middle_name','Отчествопри наличии)',false], ['phone','Номер телефона',false], ['email','Email',false], ['snils','СНИЛС',false], ['passport_series','Серия паспорта',false], ['passport_number','Номер паспорта',false], ['passport_issued_by','Кем выдан паспорт',false], ['passport_issue_date','Дата выдачи паспорта',false], ['department_code','Код подразделения',false], ['gender','Пол',false], ['birth_date','Дата рождения',false], ['registration_region','Регион регистрации',false], ['registration_locality','Населенный пункт регистрации',false], ['registration_street','Улица регистрации',false], ['registration_house','Дом регистрации',false], ['registration_apartment','Квартира регистрации',false], ['registration_postal_code','Индекс регистрации',false], ['education_first_name','Имядательный падеж)',false], ['education_last_name','Фамилиядательный падеж)',false], ['education_middle_name','Отчестводательный падеж)',false], ['education','Образование',false], ['diploma_profession','Профессия по диплому',false], ['diploma_institution','Учебное заведение по диплому',false], ['diploma_last_name','Фамилия, указанная в дипломе',false], ['diploma_number','Номер диплома',false], ['diploma_series','Серия диплома',false], ['diploma_registration_number','Регистрационный номер диплома',false], ['diploma_issue_date','Дата выдачи диплома',false],
-].map(([key, title, required]) => ({ path: `learners.${key}`, title, required, group: 'Слушатель' }));
+].map((row) => {
+  const [key, title, required] = row as [string, string, boolean];
+  return { path: `learners.${key}`, title, required, group: 'Слушатель' };
+});
 const APPLICATION_FIELDS: TargetField[] = [
   ['order_number','Номер заявки',true], ['course','Курс',true], ['last_name','Фамилия',true], ['first_name','Имя',true], ['middle_name','Отчество',false], ['phone','Телефон',false], ['email','Email',false], ['stream_number','Номер потока',false],
-].map(([key, title, required]) => ({ path: `applications.${key}`, title, required, group: 'Заявка' }));
+].map((row) => {
+  const [key, title, required] = row as [string, string, boolean];
+  return { path: `applications.${key}`, title, required, group: 'Заявка' };
+});
 
 export const FIELDS_BY_TARGET: Record<ImportTarget, TargetField[]> = {
   interactions: INTERACTION_FIELDS,
