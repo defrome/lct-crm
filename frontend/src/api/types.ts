@@ -156,6 +156,70 @@ export interface AssignmentCreate {
 export interface VendorRead {
   id: UUID;
   name: string;
+  contacts?: VendorContactRead[];
+  created_at: DateTime;
+  updated_at: DateTime;
+}
+
+export interface VendorContactRead {
+  id: UUID;
+  vendor_id: UUID;
+  full_name: string;
+  phone: string | null;
+  email: string | null;
+  communication_method: string | null;
+  created_at: DateTime;
+  updated_at: DateTime;
+}
+
+export interface LearnerRead {
+  id: UUID;
+  last_name: string;
+  first_name: string;
+  middle_name: string | null;
+  phone: string | null;
+  email: string | null;
+  snils: string | null;
+  passport_series: string | null;
+  passport_number: string | null;
+  passport_issued_by: string | null;
+  passport_issue_date: DateOnly | null;
+  department_code: string | null;
+  gender: string | null;
+  birth_date: DateOnly | null;
+  registration_region: string | null;
+  registration_locality: string | null;
+  registration_street: string | null;
+  registration_house: string | null;
+  registration_apartment: string | null;
+  registration_postal_code: string | null;
+  education_first_name: string | null;
+  education_last_name: string | null;
+  education_middle_name: string | null;
+  education: string | null;
+  diploma_profession: string | null;
+  diploma_institution: string | null;
+  diploma_last_name: string | null;
+  diploma_number: string | null;
+  diploma_series: string | null;
+  diploma_registration_number: string | null;
+  diploma_issue_date: DateOnly | null;
+  created_at: DateTime;
+  updated_at: DateTime;
+}
+
+export interface TrainingApplicationRead {
+  id: UUID;
+  order_number: string;
+  course: string;
+  last_name: string;
+  first_name: string;
+  middle_name: string | null;
+  phone: string | null;
+  email: string | null;
+  stream_number: number | null;
+  learner_id: UUID | null;
+  learner?: LearnerRead | null;
   created_at: DateTime;
   updated_at: DateTime;
 }

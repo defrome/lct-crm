@@ -24,7 +24,7 @@ import { Modal } from '@/components/ui/Modal';
 import { EmptyState, ErrorState, PageHeader, Skeleton } from '@/components/ui/States';
 import { saveBlob } from '@/lib/download';
 import { formatBytes } from '@/lib/format';
-import { FIELDS_BY_TARGET, TARGET_OPTIONS } from './fields';
+import { fieldTitle, FIELDS_BY_TARGET, TARGET_OPTIONS } from './fields';
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
@@ -625,7 +625,7 @@ function PreviewStep({
         ) : (
           <ul className="flex flex-col px-3 pb-3 sm:px-5 sm:pb-5">
             {rows.data!.items.map((row) => (
-              <RowPreview key={row.id} row={row} />
+              <RowPreview key={row.id} row={row} target={job.target} mapping={job.mapping} />
             ))}
           </ul>
         )}
@@ -667,7 +667,15 @@ function PreviewStep({
   );
 }
 
-function RowPreview({ row }: { row: ImportRowRead }) {
+function RowPreview({
+  row,
+  target,
+  mapping,
+}: {
+  row: ImportRowRead;
+  target: ImportTarget;
+  mapping: Record<string, string>;
+}) {
   const [open, setOpen] = useState(false);
 
   // `raw_data` is the spreadsheet as the user typed it, keyed by their own
@@ -676,6 +684,12 @@ function RowPreview({ row }: { row: ImportRowRead }) {
   const cells = Object.entries(row.raw_data ?? {}).filter(
     ([, value]) => value !== null && value !== undefined && String(value).trim() !== '',
   );
+  const parsedFields = Object.entries(mapping)
+    .map(([, path]) => {
+      const value = parsedValue(row.parsed_data, path);
+      return { column, path, value };
+    })
+    .filter(({ value }) => value !== null && value !== undefined && String(value).trim() !== '');
 
   const messages = messagesOf(row);
   const summary =
@@ -725,6 +739,24 @@ function RowPreview({ row }: { row: ImportRowRead }) {
               ))}
             </ul>
           )}
+          {parsedFields.length > 0 && (
+            <>
+              <p className="mb-2 text-desc font-medium uppercase tracking-wide text-fg-muted">
+                Распознанные поля системы
+              </p>
+              <dl className="mb-3 grid gap-x-6 gap-y-1 sm:grid-cols-2">
+                {parsedFields.map(({ path, value }) => (
+                  <div key={path} className="flex gap-2 text-desc">
+                    <dt className="shrink-0 text-fg-muted">{fieldTitle(target, path)}:</dt>
+                    <dd className="min-w-0 truncate text-fg">{String(value)}</dd>
+                  </div>
+                ))}
+              </dl>
+            </>
+          )}
+          <p className="mb-2 text-desc font-medium uppercase tracking-wide text-fg-muted">
+            Исходные значения файла
+          </p>
           <dl className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
             {cells.map(([header, value]) => (
               <div key={header} className="flex gap-2 text-desc">
@@ -737,6 +769,15 @@ function RowPreview({ row }: { row: ImportRowRead }) {
       )}
     </li>
   );
+}
+
+function parsedValue(parsed: Record<string, unknown>, path: string): unknown {
+  const field = path.split('.').at(-1) ?? path;
+  const candidates = [path.replace('.', '_'), field];
+  for (const key of candidates) {
+    if (Object.prototype.hasOwnProperty.call(parsed, key)) return parsed[key];
+  }
+  return undefined;
 }
 
 /**
