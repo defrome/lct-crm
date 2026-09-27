@@ -187,9 +187,13 @@ class CommunicationService:
         if rule.recipient_kind == "responsible":
             return [interaction.responsible_user_id] if interaction.responsible_user_id else []
         if rule.recipient_kind == "manager":
-            manager_id = await self.session.scalar(
-                sa.select(User.manager_id).where(User.id == interaction.responsible_user_id)
-            ) if interaction.responsible_user_id else None
+            manager_id = (
+                await self.session.scalar(
+                    sa.select(User.manager_id).where(User.id == interaction.responsible_user_id)
+                )
+                if interaction.responsible_user_id
+                else None
+            )
             return [manager_id] if manager_id else []
         if rule.recipient_kind == "role":
             return list(
@@ -486,7 +490,10 @@ class CommunicationService:
         )
 
     async def post_message(
-        self, interaction_id: uuid.UUID, author_id: uuid.UUID, body: str,
+        self,
+        interaction_id: uuid.UUID,
+        author_id: uuid.UUID,
+        body: str,
         mention_user_ids: list[uuid.UUID] | None = None,
     ) -> ChatMessage:
         interaction = await self.interactions.get_or_fail(interaction_id)
