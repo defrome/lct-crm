@@ -47,6 +47,7 @@ class UserUpdate(ORMModel):
     """Administrator-editable contact settings for an existing employee."""
 
     telegram_user_id: str | None = Field(default=None, min_length=1, max_length=64)
+    manager_id: uuid.UUID | None = None
 
 
 class UserVisibilityUpdate(ORMModel):
