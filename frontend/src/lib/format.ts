@@ -112,6 +112,7 @@ export const IMPORT_TARGET_LABELS: Record<ImportTarget, string> = {
 export const ENTITY_LABELS: Record<string, string> = {
   universities: 'Вуз',
   university_contacts: 'Контакт вуза',
+  university_assignments: 'Назначение КАМа',
   kam_assignments: 'Назначение КАМа',
   vendors: 'Вендор',
   it_directions: 'ИТ-направление',
