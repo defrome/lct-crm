@@ -33,10 +33,10 @@ import sqlalchemy as sa
 from sqlalchemy import event, inspect
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.models.audit_log import AuditLog
 from app.models.base import Base
 from app.models.enums import AuditAction
-from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
