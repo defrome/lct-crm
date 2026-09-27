@@ -83,7 +83,7 @@ export function NotificationCenter() {
         onClick={() => setOpen((value) => !value)}
       />
       {open && (
-        <div className="animate-menu absolute top-[calc(100%+8px)] right-0 z-[1000] w-[min(380px,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] min-w-0 origin-top-right overflow-hidden rounded-l bg-elevated p-4 shadow-bottom-l">
+        <div className="animate-menu fixed top-16 right-2 left-2 z-[1000] max-h-[calc(100dvh-5rem)] min-w-0 origin-top-right overflow-y-auto overflow-x-hidden rounded-l bg-elevated p-4 shadow-bottom-l sm:absolute sm:top-[calc(100%+8px)] sm:right-0 sm:left-auto sm:max-h-none sm:w-[min(380px,calc(100vw-2rem))] sm:max-w-[calc(100vw-2rem)]">
           <div className="flex items-center justify-between gap-3 border-b border-border-soft pb-3">
             <div>
               <h2 className="text-body-m font-medium text-fg">Уведомления</h2>
