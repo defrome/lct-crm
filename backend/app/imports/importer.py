@@ -527,7 +527,18 @@ class ImportService:
         if not parsed.get("vendors_name"):
             messages.append(error("Не заполнено название компании", "vendors.name"))
         parsed["existing_entity_id"] = None
-        parsed["dedupe_key"] = normalize_name(parsed.get("vendors_name") or "")
+        # A vendor row can also carry a product and a contact.  The vendor
+        # name alone is therefore not the row's identity: several distinct
+        # rows for one company are expected (for example, one per product or
+        # contact).  Keep the child identities in the key so only rows that
+        # update the same vendor/product/contact combination are collapsed.
+        parsed["dedupe_key"] = "|".join(
+            (
+                normalize_name(parsed.get("vendors_name") or ""),
+                normalize_name(parsed.get("it_products_name") or ""),
+                normalize_person_name(parsed.get("vendor_contacts_full_name") or ""),
+            )
+        )
         return parsed, messages
 
     async def _validate_vendor_contact_row(

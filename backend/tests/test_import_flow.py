@@ -412,6 +412,30 @@ async def test_import_of_products_target(session):
     assert links == 2
 
 
+async def test_vendor_rows_with_same_company_are_not_marked_as_duplicates(session):
+    """Vendor imports may contain multiple products/contacts for one company."""
+    content = make_xlsx(
+        [
+            ["ООО «РТК ИТ Плюс»", "«AKOLA»", "Попова Мария Владимировна", "+7 1", "a@example.ru", "Почта"],
+            ["ООО «РТК ИТ Плюс»", "«Яга»", "Соколов Алексей Андреевич", "+7 2", "b@example.ru", "Почта"],
+            ["ООО «РТК ИТ»", "«Web3Gate»", "Лебедева Елена Дмитриевна", "+7 3", "c@example.ru", "Почта"],
+            ["ООО «РТК ИТ»", "«Аврора SDK»", "Козлов Максим Игоревич", "+7 4", "d@example.ru", "Почта"],
+            ["ООО «РТК ИТ»", "«Нейрошлюз»", "Новикова Ольга Александровна", "+7 5", "e@example.ru", "Почта"],
+        ],
+        headers=["Компания", "Продукт", "ФИО", "Телефон", "Почта", "Способ связи"],
+    )
+    service = ImportService(session, AccessScope.system())
+    created = await service.create_job(
+        filename="vendors.xlsx", content=content, target=ImportTarget.VENDORS
+    )
+    job = created["job"]
+    await service.validate(job.id)
+
+    rows = await service.all_rows(job.id)
+    assert [row.status for row in rows] == [ImportRowStatus.OK] * 5
+    assert all("superseded_by_row" not in row.parsed_data for row in rows)
+
+
 async def test_report_contains_every_row_with_a_verdict(session):
     from openpyxl import load_workbook
 
