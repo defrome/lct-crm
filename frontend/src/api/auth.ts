@@ -1,7 +1,7 @@
 /** Keycloak Authorization Code + PKCE session handling. */
 
 const REALM_BASE = `${import.meta.env.VITE_KEYCLOAK_PATH ?? '/kc'}/realms/${
-  import.meta.env.VITE_KEYCLOAK_REALM ?? 'crm'
+  window.__CRM_CONFIG__?.keycloakRealm ?? import.meta.env.VITE_KEYCLOAK_REALM ?? 'crm'
 }/protocol/openid-connect`;
 
 const CLIENT_ID = import.meta.env.VITE_KEYCLOAK_CLIENT_ID ?? 'crm-web';

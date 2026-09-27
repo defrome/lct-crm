@@ -1,11 +1,10 @@
 #!/bin/sh
-# Realm imports only apply to a new database. Keep the local web OIDC client
-# current when the Keycloak data volume already exists.
 set -eu
 
 KCADM=/opt/keycloak/bin/kcadm.sh
 KCADM_CONFIG=/tmp/kcadm.config
 CLIENT_FILE=/opt/keycloak/data/import/crm-web-client.json
+KEYCLOAK_REALM=${KEYCLOAK_REALM:-crm}
 
 for attempt in 1 2 3 4 5; do
   if "$KCADM" config credentials \
@@ -23,22 +22,16 @@ for attempt in 1 2 3 4 5; do
   sleep 2
 done
 
-client_id="$("$KCADM" get clients --config "$KCADM_CONFIG" -r crm -q clientId=crm-web --fields id --format csv --noquotes | tr -d '\r\n')"
+client_id="$("$KCADM" get clients --config "$KCADM_CONFIG" -r "$KEYCLOAK_REALM" -q clientId=crm-web --fields id --format csv --noquotes | tr -d '\r\n')"
 if [ -n "$client_id" ]; then
-  "$KCADM" update "clients/$client_id" --config "$KCADM_CONFIG" -r crm -f "$CLIENT_FILE"
-  echo "Updated Keycloak client crm-web"
+  "$KCADM" update "clients/$client_id" --config "$KCADM_CONFIG" -r "$KEYCLOAK_REALM" -f "$CLIENT_FILE"
 else
-  "$KCADM" create clients --config "$KCADM_CONFIG" -r crm -f "$CLIENT_FILE"
-  client_id=$("$KCADM" get clients --config "$KCADM_CONFIG" -r crm -q clientId=crm-web --fields id --format csv --noquotes | tr -d '\r\n')
-  echo "Created Keycloak client crm-web"
+  "$KCADM" create clients --config "$KCADM_CONFIG" -r "$KEYCLOAK_REALM" -f "$CLIENT_FILE"
+  client_id="$("$KCADM" get clients --config "$KCADM_CONFIG" -r "$KEYCLOAK_REALM" -q clientId=crm-web --fields id --format csv --noquotes | tr -d '\r\n')"
 fi
 
-# Production uses the web application's public domain rather than localhost.
-# Keep the checked-in client definition suitable for local development, then
-# reconcile the deployed redirect URI/origin when compose provides it.
-if [ -n "${CRM_WEB_ORIGIN:-}" ]; then
-  "$KCADM" update "clients/$client_id" --config "$KCADM_CONFIG" -r crm \
-    -s "redirectUris=[\"${CRM_WEB_ORIGIN%/}/auth/callback\"]" \
-    -s "webOrigins=[\"${CRM_WEB_ORIGIN%/}\"]"
-  echo "Configured Keycloak client crm-web for ${CRM_WEB_ORIGIN%/}"
+if [ -n "\${CRM_WEB_ORIGIN:-}" ]; then
+  "$KCADM" update "clients/$client_id" --config "$KCADM_CONFIG" -r "$KEYCLOAK_REALM" \
+    -s "redirectUris=[\"$CRM_WEB_ORIGIN/auth/callback\"]" \
+    -s "webOrigins=[\"$CRM_WEB_ORIGIN\"]"
 fi

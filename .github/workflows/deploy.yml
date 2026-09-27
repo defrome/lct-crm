@@ -210,8 +210,8 @@ jobs:
             "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/docker/prometheus/prometheus.yml"
           scp -P "${DEPLOY_PORT:-22}" -r docker/grafana/provisioning docker/grafana/dashboards \
             "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/docker/grafana/"
-          scp -P "${DEPLOY_PORT:-22}" docker/keycloak/realm-export.json \
-            "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/docker/keycloak/realm-export.json"
+          scp -P "${DEPLOY_PORT:-22}" docker/keycloak/realm-production.json \
+            "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/docker/keycloak/realm-production.json"
           scp -P "${DEPLOY_PORT:-22}" docker/keycloak/crm-web-client.json docker/keycloak/ensure-crm-web-client.sh \
             "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/docker/keycloak/"
 

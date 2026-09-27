@@ -197,6 +197,7 @@ services:
       # realm Keycloak прописан один web origin.
       API_ORIGIN: http://api:8000
       KEYCLOAK_ORIGIN: http://keycloak:8080
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:-crm}
     ports:
       - "${WEB_PORT:-5173}:80"
     healthcheck:

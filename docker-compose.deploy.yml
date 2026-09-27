@@ -18,7 +18,7 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:26.0
     container_name: crm-keycloak
-    command: start-dev --import-realm
+    command: start --import-realm
     environment:
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD is required}
@@ -28,10 +28,13 @@ services:
       KC_HOSTNAME: https://${DOMAIN:?DOMAIN is required}/kc
       KC_PROXY_HEADERS: xforwarded
       KC_HTTP_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
+      KC_METRICS_ENABLED: "true"
     expose:
       - "8080"
     volumes:
-      - ./docker/keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+      - ./docker/keycloak/realm-production.json:/opt/keycloak/data/import/realm-production.json:ro
+      - keycloak-data:/opt/keycloak/data
     healthcheck:
       test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 || exit 1"]
       interval: 10s
@@ -49,6 +52,7 @@ services:
     environment:
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD is required}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:-crm-production}
       CRM_WEB_ORIGIN: https://${DOMAIN:?DOMAIN is required}
     entrypoint: ["/bin/sh", "/opt/keycloak/data/import/ensure-crm-web-client.sh"]
     volumes:
@@ -126,9 +130,9 @@ services:
       SEED_ON_START: ${SEED_ON_START:-false}
       # Derived from the same public URL as KC_HOSTNAME so token issuer and API
       # validation target cannot drift apart.
-      KEYCLOAK_ISSUER: https://${DOMAIN:?DOMAIN is required}/kc/realms/crm
+      KEYCLOAK_ISSUER: https://${DOMAIN:?DOMAIN is required}/kc/realms/${KEYCLOAK_REALM:-crm-production}
       KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-}
-      KEYCLOAK_JWKS_URL: http://keycloak:8080/realms/crm/protocol/openid-connect/certs
+      KEYCLOAK_JWKS_URL: http://keycloak:8080/realms/${KEYCLOAK_REALM:-crm-production}/protocol/openid-connect/certs
       OBJECT_STORAGE_BACKEND: minio
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
@@ -173,6 +177,7 @@ services:
     environment:
       API_ORIGIN: http://api:8000
       KEYCLOAK_ORIGIN: http://keycloak:8080
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:-crm-production}
     expose:
       - "80"
     healthcheck:
@@ -246,6 +251,7 @@ services:
     restart: unless-stopped
 
 volumes:
+  keycloak-data:
   postgres-data:
   minio-data:
   redis-data:
