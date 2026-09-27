@@ -41,6 +41,10 @@ class Settings(BaseSettings):
     app_name: str = "CRM IT School"
     api_prefix: str = "/api/v1"
     log_level: str = "INFO"
+    # Secret used to pseudonymise personal data in audit records. Supplied by
+    # a secret manager in production, never committed to the repository.
+    audit_hash_key: str | None = None
+    retention_days: int = 30
 
     # --- Database ----------------------------------------------------------
     postgres_host: str = "localhost"
@@ -159,6 +163,10 @@ class Settings(BaseSettings):
             raise ValueError("SMTP_PORT must be between 1 and 65535")
         if self.smtp_use_tls and self.smtp_use_ssl:
             raise ValueError("SMTP_USE_TLS and SMTP_USE_SSL cannot both be enabled")
+        if self.retention_days < 1:
+            raise ValueError("RETENTION_DAYS must be at least 1")
+        if self.env == "production" and not self.audit_hash_key:
+            raise ValueError("AUDIT_HASH_KEY must be set in production")
         return self
 
 

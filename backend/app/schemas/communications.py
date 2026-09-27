@@ -38,6 +38,7 @@ class NotificationDeliveryRead(ORMModel):
 
 class ChatMessageCreate(BaseModel):
     body: str = Field(min_length=1, max_length=5000)
+    mention_user_ids: list[uuid.UUID] = Field(default_factory=list, max_length=20)
 
 
 class ChatAttachmentRead(ORMModel):
@@ -56,6 +57,7 @@ class ChatMessageRead(ORMModel):
     author_id: uuid.UUID
     author: UserShort
     body: str
+    mention_user_ids: list[uuid.UUID] = Field(default_factory=list)
     created_at: dt.datetime
     attachments: list[ChatAttachmentRead] = Field(default_factory=list)
 

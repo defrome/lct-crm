@@ -49,6 +49,7 @@ class UserService:
             full_name_normalized=normalize_person_name(full_name),
             email=clean_text(data.email),
             telegram_user_id=clean_text(data.telegram_user_id),
+            manager_id=data.manager_id,
             role=data.role,
             is_active=data.is_active,
         )
@@ -70,6 +71,7 @@ class UserService:
         """Update notification contact details for an existing employee."""
         user = await self.get(user_id)
         user.telegram_user_id = clean_text(data.telegram_user_id)
+        user.manager_id = data.manager_id
         await self.session.commit()
         return user
 

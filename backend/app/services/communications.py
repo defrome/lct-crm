@@ -187,18 +187,10 @@ class CommunicationService:
         if rule.recipient_kind == "responsible":
             return [interaction.responsible_user_id] if interaction.responsible_user_id else []
         if rule.recipient_kind == "manager":
-            # A manager hierarchy has not been agreed; privileged users are a safe fallback.
-            return list(
-                (
-                    await self.session.scalars(
-                        sa.select(User.id).where(
-                            User.role.in_(("manager", "admin")),
-                            User.is_active.is_(True),
-                            User.deleted_at.is_(None),
-                        )
-                    )
-                ).all()
-            )
+            manager_id = await self.session.scalar(
+                sa.select(User.manager_id).where(User.id == interaction.responsible_user_id)
+            ) if interaction.responsible_user_id else None
+            return [manager_id] if manager_id else []
         if rule.recipient_kind == "role":
             return list(
                 (
@@ -494,7 +486,8 @@ class CommunicationService:
         )
 
     async def post_message(
-        self, interaction_id: uuid.UUID, author_id: uuid.UUID, body: str
+        self, interaction_id: uuid.UUID, author_id: uuid.UUID, body: str,
+        mention_user_ids: list[uuid.UUID] | None = None,
     ) -> ChatMessage:
         interaction = await self.interactions.get_or_fail(interaction_id)
         if not settings.feature_chat_enabled:
@@ -504,6 +497,7 @@ class CommunicationService:
             university_id=interaction.university_id,
             author_id=author_id,
             body=clean_text(body) or "",
+            mention_user_ids=[str(item) for item in (mention_user_ids or [])],
         )
         self.session.add(message)
         await self.session.commit()
@@ -515,6 +509,7 @@ class CommunicationService:
         author_id: uuid.UUID,
         body: str,
         files: list[tuple[str, bytes]],
+        mention_user_ids: list[uuid.UUID] | None = None,
         *,
         storage: ObjectStorage | None = None,
     ) -> ChatMessage:
@@ -544,6 +539,7 @@ class CommunicationService:
             university_id=interaction.university_id,
             author_id=author_id,
             body=cleaned_body,
+            mention_user_ids=[str(item) for item in (mention_user_ids or [])],
         )
         self.session.add(message)
         await self.session.flush()

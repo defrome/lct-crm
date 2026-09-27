@@ -100,6 +100,9 @@ class ChatMessage(DomainBase):
         sa.ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
     body: Mapped[str] = mapped_column(sa.Text, nullable=False)
+    mention_user_ids: Mapped[list[object]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=sa.text("'[]'::jsonb")
+    )
     author = relationship("User", lazy="selectin")
     attachments: Mapped[list[ChatAttachment]] = relationship(lazy="selectin")
 

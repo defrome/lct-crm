@@ -20,6 +20,7 @@ import datetime as dt
 import decimal
 import enum
 import hashlib
+import hmac
 import logging
 import uuid
 from collections.abc import Iterator
@@ -35,6 +36,7 @@ from sqlalchemy.orm import Session
 from app.models.audit_log import AuditLog
 from app.models.base import Base
 from app.models.enums import AuditAction
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +111,10 @@ def hash_pd(value: Any) -> str | None:
     if value is None:
         return None
     text = str(value).strip().casefold()
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+    # A keyed digest prevents dictionary attacks against low-entropy PII while
+    # remaining deterministic for equality checks within this deployment.
+    key = (settings.audit_hash_key or "development-audit-key").encode("utf-8")
+    return hmac.new(key, text.encode("utf-8"), hashlib.sha256).hexdigest()
 
 
 def jsonify(value: Any) -> Any:

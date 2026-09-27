@@ -35,6 +35,9 @@ class User(DomainBase):
     # text because Telegram IDs may exceed 32-bit integer range and can be
     # negative for group chats.
     telegram_user_id: Mapped[str | None] = mapped_column(sa.Text, default=None)
+    manager_id: Mapped[uuid.UUID | None] = mapped_column(
+        sa.ForeignKey("users.id", ondelete="RESTRICT"), default=None
+    )
     role: Mapped[UserRole] = mapped_column(
         sa.Enum(UserRole, name=USER_ROLE_ENUM, values_callable=lambda e: [m.value for m in e]),
         nullable=False,

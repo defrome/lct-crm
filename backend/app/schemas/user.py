@@ -17,6 +17,7 @@ class UserRead(ORMModel):
     full_name: str
     email: str | None = None
     telegram_user_id: str | None = None
+    manager_id: uuid.UUID | None = None
     role: UserRole
     is_active: bool
     visibility_mode: UserVisibilityMode
@@ -37,6 +38,7 @@ class UserCreate(ORMModel):
     full_name: str = Field(min_length=1, max_length=500)
     email: str | None = Field(default=None, max_length=320)
     telegram_user_id: str | None = Field(default=None, min_length=1, max_length=64)
+    manager_id: uuid.UUID | None = None
     role: UserRole = UserRole.USER
     is_active: bool = True
 

@@ -185,7 +185,9 @@ async def message(
     user: CurrentUserDep,
 ) -> ChatMessageRead:
     return ChatMessageRead.model_validate(
-        await CommunicationService(session, scope).post_message(interaction_id, user.id, data.body)
+        await CommunicationService(session, scope).post_message(
+            interaction_id, user.id, data.body, data.mention_user_ids
+        )
     )
 
 
