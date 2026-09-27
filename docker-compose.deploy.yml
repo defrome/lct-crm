@@ -123,6 +123,7 @@ services:
       ENV: ${ENV:-test}
       AUTH_MODE: ${AUTH_MODE:-dev}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      AUDIT_HASH_KEY: ${AUDIT_HASH_KEY:?AUDIT_HASH_KEY is required}
       POSTGRES_HOST: db
       POSTGRES_PORT: 5432
       POSTGRES_USER: ${POSTGRES_USER:-crm}
