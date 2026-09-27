@@ -83,7 +83,7 @@ export function NotificationCenter() {
         onClick={() => setOpen((value) => !value)}
       />
       {open && (
-        <div className="animate-menu absolute top-[calc(100%+8px)] right-0 z-[1000] w-[min(380px,calc(100vw-2rem))] origin-top-right rounded-l bg-elevated p-4 shadow-bottom-l">
+        <div className="animate-menu absolute top-[calc(100%+8px)] right-0 z-[1000] w-[min(380px,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] min-w-0 origin-top-right overflow-hidden rounded-l bg-elevated p-4 shadow-bottom-l">
           <div className="flex items-center justify-between gap-3 border-b border-border-soft pb-3">
             <div>
               <h2 className="text-body-m font-medium text-fg">Уведомления</h2>
@@ -114,10 +114,10 @@ export function NotificationCenter() {
                       {STATUS_LABELS[item.status]}
                     </span>
                   </div>
-                  <p className="mt-1 text-desc text-fg-muted">
+                  <p className="mt-1 break-words text-desc text-fg-muted">
                     Попыток: {item.attempts} · {formatDateTime(item.created_at)}
                   </p>
-                  {item.error_message && <p className="mt-1 text-desc text-error">{item.error_message}</p>}
+                  {item.error_message && <p className="mt-1 break-words text-desc text-error">{item.error_message}</p>}
                   <div className="mt-2 flex justify-end">
                     <Button
                       type="button"

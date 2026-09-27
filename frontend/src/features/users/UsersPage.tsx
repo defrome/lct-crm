@@ -1,3 +1,5 @@
+// The edit dialog rehydrates its local draft when a different employee is selected.
+// oxlint-disable react/set-state-in-effect
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
@@ -172,17 +174,28 @@ export function UsersPage() {
           sort={values.sort}
           onSortChange={(sort) => set({ sort: sort ?? '' })}
           renderCard={(row) => (
-            <div className="flex items-center gap-3">
-              <Avatar name={row.full_name} size={40} />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-body-s text-fg">{row.full_name}</span>
-                <span className="block truncate text-desc text-fg-muted">
-                  {row.email ?? <Blank />}
+            <>
+              <div className="flex items-center gap-3">
+                <Avatar name={row.full_name} size={40} />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-body-s text-fg">{row.full_name}</span>
+                  <span className="block truncate text-desc text-fg-muted">
+                    {row.email ?? <Blank />}
+                  </span>
+                  {row.telegram_user_id && <span className="block truncate text-desc text-fg-muted">Telegram: {row.telegram_user_id}</span>}
                 </span>
-                {row.telegram_user_id && <span className="block truncate text-desc text-fg-muted">Telegram: {row.telegram_user_id}</span>}
-              </span>
-              <Badge tone={ROLE_TONE[row.role]}>{ROLE_LABELS[row.role]}</Badge>
-            </div>
+                <Badge tone={ROLE_TONE[row.role]}>{ROLE_LABELS[row.role]}</Badge>
+              </div>
+              {can('admin') && (
+                <div className="flex flex-wrap gap-2 border-t border-border-soft pt-3">
+                  {row.role === 'user' && (
+                    <Button size="s" onClick={() => setVisibilityUser(row)}>Доступ</Button>
+                  )}
+                  <Button size="s" onClick={() => setEditingUser(row)}>Telegram</Button>
+                  <Button size="s" variant="danger" onClick={() => setDeletingUser(row)}>Удалить</Button>
+                </div>
+              )}
+            </>
           )}
           empty={
             <EmptyState
