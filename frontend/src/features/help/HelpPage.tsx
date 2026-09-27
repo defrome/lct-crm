@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 
+import { useTheme } from '@/app/ThemeProvider';
 import { Page } from '@/components/layout/AppShell';
 import { Chip } from '@/components/ui/Button';
 import { CardHeader, PageHeader } from '@/components/ui/States';
@@ -45,6 +46,8 @@ export function HelpPage() {
 }
 
 function UserGuide() {
+  const { resolved } = useTheme();
+
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,.8fr)]">
       <section className="card card-pad">
@@ -59,7 +62,11 @@ function UserGuide() {
       </section>
       <figure className="card overflow-hidden">
         <img
-          src="/interaction-card-help.webp"
+          src={`/interaction-card-help-${resolved}.webp`}
+          width={1200}
+          height={630}
+          loading="lazy"
+          decoding="async"
           alt="Карточка взаимодействия МГТУ им. Н.Э. Баумана"
           className="block h-auto w-full"
         />
