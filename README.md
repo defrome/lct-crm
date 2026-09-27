@@ -2,7 +2,7 @@
 
 CRM для системной работы ИТ Школы Ростелекома с вузами. Система объединяет справочники университетов и ИТ-продуктов, рабочие карточки взаимодействий, workflow, импорт из Excel, интеграции, отчёты, уведомления и аудит.
 
-Проект — монорепозиторий с FastAPI-бэкендом, React-интерфейсом и инфраструктурой Docker Compose. Локальный контур запускается одной командой; production-образы публикуются в GHCR и отдаются через Caddy с HTTPS.
+Проект — монорепозиторий с FastAPI-бэкендом, React-интерфейсом и инфраструктурой Docker Compose. Локальный контур запускается одной командой; production-контур собирает образы на сервере и отдаёт приложение через Caddy с HTTPS.
 
 ## Назначение
 
@@ -151,7 +151,7 @@ Vite проксирует `/api` и `/kc`. Production Dockerfile собирае�
 
 ## Production и CI/CD
 
-GitHub Actions параллельно проверяет бэкенд (`ruff`, `mypy`, `pytest`) и фронтенд (`npm ci`, `oxlint`, TypeScript и build), затем публикует образы `api` и `web` в GHCR. Deploy с `main` по SSH выполняет `docker compose pull`, перезапускает стек и ждёт health-check.
+GitHub Actions параллельно проверяет бэкенд (`ruff`, `mypy`, `pytest`) и фронтенд (`npm ci`, `oxlint`, TypeScript и build). Deploy с `main` по SSH загружает исходный код `backend/` и `frontend/` на сервер, собирает там образы `api` и `web` командой Docker Compose, перезапускает стек и ждёт health-check.
 
 `docker-compose.deploy.yml` размещает приложение за Caddy. Keycloak доступен на `https://DOMAIN/kc`, Grafana — через `GRAFANA_DOMAIN`; PostgreSQL, MinIO, Redis и Prometheus должны оставаться во внутренней сети. Перед эксплуатацией замените demo realm, вынесите секреты из Git, настройте резервное копирование PostgreSQL и MinIO и проверьте восстановление.
 

@@ -107,7 +107,8 @@ services:
     restart: unless-stopped
 
   api:
-    image: ${API_IMAGE:?API_IMAGE is required}:${IMAGE_TAG:-main}
+    build:
+      context: ./backend
     container_name: crm-api
     depends_on:
       db:
@@ -167,7 +168,8 @@ services:
       retries: 10
 
   web:
-    image: ${WEB_IMAGE:?WEB_IMAGE is required}:${IMAGE_TAG:-main}
+    build:
+      context: ./frontend
     container_name: crm-web
     depends_on:
       api:

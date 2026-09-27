@@ -7,9 +7,6 @@ on:
   pull_request:
   workflow_dispatch:
 
-env:
-  REGISTRY: ghcr.io
-
 concurrency:
   group: test-deploy
   cancel-in-progress: true
@@ -101,59 +98,9 @@ jobs:
       - name: Type check and build
         run: npm run build
 
-  publish:
-    name: Build and publish ${{ matrix.component }} image
-    needs: [backend, frontend]
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-      packages: write
-
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - component: api
-            context: ./backend
-          - component: web
-            context: ./frontend
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v5
-
-      - name: Normalize image name
-        id: image
-        run: |
-          echo "name=${REGISTRY}/${GITHUB_REPOSITORY,,}/${{ matrix.component }}" \
-            >> "$GITHUB_OUTPUT"
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and push image
-        uses: docker/build-push-action@v6
-        with:
-          context: ${{ matrix.context }}
-          push: true
-          # Always rebuild application images from the current checkout. A
-          # stale layer can otherwise keep a fixed bug in the deployed image.
-          no-cache: true
-          tags: |
-            ${{ steps.image.outputs.name }}:main
-            ${{ steps.image.outputs.name }}:sha-${{ github.sha }}
-
   deploy:
     name: Deploy to test server
-    needs: publish
+    needs: [backend, frontend]
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     environment: test
@@ -161,13 +108,6 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v5
-
-      - name: Normalize image names
-        id: image
-        run: |
-          base="${REGISTRY}/${GITHUB_REPOSITORY,,}"
-          echo "api=${base}/api" >> "$GITHUB_OUTPUT"
-          echo "web=${base}/web" >> "$GITHUB_OUTPUT"
 
       - name: Start SSH agent
         uses: webfactory/ssh-agent@v0.9.0
@@ -204,6 +144,12 @@ jobs:
               fi"
           scp -P "${DEPLOY_PORT:-22}" docker-compose.deploy.yml \
             "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/docker-compose.deploy.yml"
+          # Mirror build contexts so files deleted in Git are not retained in
+          # a previous server-side Docker build context.
+          rsync -az --delete -e "ssh -p ${DEPLOY_PORT:-22}" backend/ \
+            "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/backend/"
+          rsync -az --delete -e "ssh -p ${DEPLOY_PORT:-22}" frontend/ \
+            "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/frontend/"
           scp -P "${DEPLOY_PORT:-22}" docker/Caddyfile \
             "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/docker/Caddyfile"
           scp -P "${DEPLOY_PORT:-22}" docker/prometheus/prometheus.yml \
@@ -215,35 +161,17 @@ jobs:
           scp -P "${DEPLOY_PORT:-22}" docker/keycloak/crm-web-client.json docker/keycloak/ensure-crm-web-client.sh \
             "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/docker/keycloak/"
 
-      - name: Log in to GHCR on server
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_REGISTRY_USERNAME: ${{ secrets.DEPLOY_REGISTRY_USERNAME }}
-          DEPLOY_REGISTRY_TOKEN: ${{ secrets.DEPLOY_REGISTRY_TOKEN }}
-        run: |
-          printf '%s' "$DEPLOY_REGISTRY_TOKEN" | \
-            ssh -p "${DEPLOY_PORT:-22}" "$DEPLOY_USER@$DEPLOY_HOST" \
-            "docker login $REGISTRY --username '$DEPLOY_REGISTRY_USERNAME' --password-stdin"
-
-      - name: Deploy image
+      - name: Deploy local build
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-          API_IMAGE: ${{ steps.image.outputs.api }}
-          WEB_IMAGE: ${{ steps.image.outputs.web }}
-          IMAGE_TAG: sha-${{ github.sha }}
         run: |
           ssh -p "${DEPLOY_PORT:-22}" "$DEPLOY_USER@$DEPLOY_HOST" \
-            bash -s -- "$DEPLOY_PATH" "$API_IMAGE" "$WEB_IMAGE" "$IMAGE_TAG" <<'REMOTE'
+            bash -s -- "$DEPLOY_PATH" <<'REMOTE'
           set -euo pipefail
           deploy_path="$1"
-          api_image="$2"
-          web_image="$3"
-          image_tag="$4"
 
           cd "$deploy_path"
           if [ ! -f .env ]; then
@@ -251,15 +179,10 @@ jobs:
             exit 1
           fi
 
-          export API_IMAGE="$api_image" WEB_IMAGE="$web_image" IMAGE_TAG="$image_tag"
-          # Refresh every image, not only the application images. This keeps
-          # long-lived services (mailpit, keycloak and monitoring included)
-          # from remaining on an old locally cached image.
-          docker compose -f docker-compose.deploy.yml pull
-
           # Recreate every service on each deployment so changed images and
-          # environment/configuration are applied immediately. Volumes are
-          # deliberately preserved, so database and monitoring data survive.
+          # configuration are applied immediately. API and web images are
+          # built locally from the source uploaded by this workflow. Volumes
+          # are deliberately preserved, so database and monitoring data survive.
           if ! docker compose -f docker-compose.deploy.yml up -d --no-build --force-recreate db minio redis mailpit; then
             echo "compose startup failed; recent container logs follow"
             docker compose -f docker-compose.deploy.yml ps || true
@@ -283,7 +206,7 @@ jobs:
             exit 1
           fi
 
-          if ! docker compose -f docker-compose.deploy.yml up -d --no-build --no-deps --force-recreate api web; then
+          if ! docker compose -f docker-compose.deploy.yml up -d --build --no-deps --force-recreate api web; then
             echo "compose startup failed; recent container logs follow"
             docker compose -f docker-compose.deploy.yml ps || true
             docker compose -f docker-compose.deploy.yml logs --tail=100 db keycloak api web caddy || true
@@ -308,32 +231,6 @@ jobs:
             docker compose -f docker-compose.deploy.yml logs --tail=100 api web
             exit 1
           fi
-
-          expected_api_image="$api_image:$image_tag"
-          expected_web_image="$web_image:$image_tag"
-          actual_api_image="$(docker inspect --format '{{.Config.Image}}' crm-api)"
-          actual_web_image="$(docker inspect --format '{{.Config.Image}}' crm-web)"
-          if [ "$actual_api_image" != "$expected_api_image" ] || [ "$actual_web_image" != "$expected_web_image" ]; then
-            echo "running images do not match the selected release" >&2
-            printf 'expected api=%s web=%s\n' "$expected_api_image" "$expected_web_image" >&2
-            printf 'actual api=%s web=%s\n' "$actual_api_image" "$actual_web_image" >&2
-            exit 1
-          fi
-
-          # Keep the exact successfully deployed release reference on the
-          # server. Later manual `docker compose` commands then use the same
-          # CI-validated images instead of failing on missing variables or
-          # drifting to a mutable tag.
-          umask 077
-          env_tmp="$(mktemp .env.deploy.XXXXXX)"
-          sed '/^\(API_IMAGE\|WEB_IMAGE\|IMAGE_TAG\)=/d' .env > "$env_tmp"
-          {
-            printf '\n# Managed by GitHub Actions; last successfully deployed release.\n'
-            printf 'API_IMAGE=%s\n' "$api_image"
-            printf 'WEB_IMAGE=%s\n' "$web_image"
-            printf 'IMAGE_TAG=%s\n' "$image_tag"
-          } >> "$env_tmp"
-          mv "$env_tmp" .env
 
           # Monitoring services are not dependencies of the API. Start them
           # explicitly before Caddy so its reverse proxy can resolve grafana
