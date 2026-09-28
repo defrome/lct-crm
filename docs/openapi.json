@@ -12,22 +12,19 @@
           "Служебное"
         ],
         "summary": "Проверка живости сервиса",
-        "description": "Возвращает `{\"status\": \"ok\"}`, если процесс обслуживает запросы.",
+        "description": "Возвращает `{\"status\": \"ok\"}`, когда API и PostgreSQL готовы принимать запросы.",
         "operationId": "health_health_get",
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "type": "object",
-                  "title": "Response Health Health Get"
-                }
+                "schema": {}
               }
             }
+          },
+          "503": {
+            "description": "PostgreSQL временно недоступен"
           }
         }
       }
@@ -770,7 +767,7 @@
           "Справочник: вузы"
         ],
         "summary": "Назначить ответственного за вуз",
-        "description": "Доступно ролям `manager` и `admin`.\n\nУ вуза не может быть двух активных назначений с пересекающимися периодами: проверка выполняется в сервисе и дублируется exclusion-ограничением в БД. `assigned_to = null` означает бессрочное назначение.",
+        "description": "Доступно ролям `manager` и `admin`.\n\nУ вуза не может быть двух активных назначений с пересекающимися периодами; дата `assigned_to` не включается в период, поэтому нового КАМа можно назначить в этот же день. Проверка выполняется в сервисе и дублируется exclusion-ограничением в БД. `assigned_to = null` означает бессрочное назначение.",
         "operationId": "create_assignment_api_v1_universities__university_id__assignments_post",
         "parameters": [
           {
@@ -5716,6 +5713,153 @@
             }
           }
         }
+      },
+      "patch": {
+        "tags": [
+          "Сотрудники"
+        ],
+        "summary": "Обновить Telegram ID сотрудника",
+        "description": "Только администратор. Передайте `null`, чтобы отключить личные Telegram-напоминания.",
+        "operationId": "update_user_api_v1_users__user_id__patch",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserRead"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Доступ запрещён. Коды: ACCESS_DENIED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Объект не найден. Коды: NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Конфликт состояния или дубликат. Коды: DUPLICATE_ENTITY",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Ошибка валидации. Коды: VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Сотрудники"
+        ],
+        "summary": "Удалить сотрудника (мягкое удаление)",
+        "description": "Только для роли `admin`. Запись скрывается из рабочих списков, а связанные назначения и историю сохраняются.",
+        "operationId": "delete_user_api_v1_users__user_id__delete",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "Доступ запрещён. Коды: ACCESS_DENIED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Объект не найден. Коды: NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Конфликт состояния или дубликат. Коды: DUPLICATE_ENTITY",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Ошибка валидации. Коды: VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/users/{user_id}/visibility": {
@@ -5870,7 +6014,7 @@
           "Импорт каталогов"
         ],
         "summary": "Шаг 1. Загрузить файл каталога",
-        "description": "Принимает `.xlsx` или `.xls`.\n\nПроверки: реальный формат определяется по сигнатуре файла (имя и `Content-Type` не используются), размер ≤ 20 МБ, в файле есть хотя бы одна непустая строка данных.\n\nВ ответе — `job_id`, заголовки первой строки и автоматически предложенный маппинг колонок. Если файл с таким же содержимым уже загружался, приходит предупреждение, но загрузка не блокируется: повторный импорт идемпотентен благодаря upsert.",
+        "description": "Принимает `.xlsx`, `.xls` или `.json`.\n\nПроверки: реальный формат определяется по сигнатуре файла (имя и `Content-Type` не используются), размер ≤ 20 МБ, в файле есть хотя бы одна непустая строка данных.\n\nВ ответе — `job_id`, заголовки первой строки и автоматически предложенный маппинг колонок. Если файл с таким же содержимым уже загружался, приходит предупреждение, но загрузка не блокируется: повторный импорт идемпотентен благодаря upsert.",
         "operationId": "upload_import_api_v1_imports_post",
         "requestBody": {
           "required": true,
@@ -6247,6 +6391,61 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Доступ запрещён. Коды: ACCESS_DENIED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Объект не найден. Коды: NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Импорт каталогов"
+        ],
+        "summary": "Удалить загруженный каталог",
+        "description": "Скрывает задачу импорта из истории. Уже созданные или обновлённые при импорте записи CRM не удаляются. Доступно ролям `manager` и `admin`.",
+        "operationId": "delete_job_api_v1_imports__job_id__delete",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
           },
           "403": {
             "description": "Доступ запрещён. Коды: ACCESS_DENIED",
@@ -7369,6 +7568,43 @@
         }
       }
     },
+    "/api/v1/notifications/{notification_id}/read": {
+      "post": {
+        "tags": [
+          "Коммуникации и обучение"
+        ],
+        "summary": "Отметить уведомление прочитанным",
+        "description": "Скрывает уведомление из списка текущего пользователя.",
+        "operationId": "mark_notification_read_api_v1_notifications__notification_id__read_post",
+        "parameters": [
+          {
+            "name": "notification_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Notification Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/interactions/{interaction_id}/messages": {
       "get": {
         "tags": [
@@ -7455,6 +7691,97 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interactions/{interaction_id}/messages/with-attachments": {
+      "post": {
+        "tags": [
+          "Коммуникации и обучение"
+        ],
+        "summary": "Добавить сообщение с вложениями",
+        "description": "Создаёт сообщение для указанного взаимодействия и прикрепляет к нему загруженные файлы.",
+        "operationId": "message_with_attachments_api_v1_interactions__interaction_id__messages_with_attachments_post",
+        "parameters": [
+          {
+            "name": "interaction_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Interaction Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_message_with_attachments_api_v1_interactions__interaction_id__messages_with_attachments_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatMessageRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/chat-attachments/{attachment_id}/download": {
+      "get": {
+        "tags": [
+          "Коммуникации и обучение"
+        ],
+        "summary": "Скачать вложение чата",
+        "description": "Возвращает содержимое вложения, доступного пользователю в рамках его области видимости.",
+        "operationId": "download_chat_attachment_api_v1_chat_attachments__attachment_id__download_get",
+        "parameters": [
+          {
+            "name": "attachment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Attachment Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
           },
           "422": {
             "description": "Validation Error",
@@ -8059,6 +8386,29 @@
         ],
         "title": "AuditLogRead"
       },
+      "Body_message_with_attachments_api_v1_interactions__interaction_id__messages_with_attachments_post": {
+        "properties": {
+          "files": {
+            "items": {
+              "type": "string",
+              "contentMediaType": "application/octet-stream"
+            },
+            "type": "array",
+            "title": "Files",
+            "description": "До 10 файлов"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "files"
+        ],
+        "title": "Body_message_with_attachments_api_v1_interactions__interaction_id__messages_with_attachments_post"
+      },
       "Body_upload_attachment_api_v1_interactions__interaction_id__stages__stage_id__attachments_post": {
         "properties": {
           "file": {
@@ -8092,7 +8442,7 @@
             "type": "string",
             "contentMediaType": "application/octet-stream",
             "title": "File",
-            "description": "Файл каталога .xlsx или .xls"
+            "description": "Файл каталога .xlsx, .xls или .json"
           },
           "target": {
             "$ref": "#/components/schemas/ImportTarget",
@@ -8114,6 +8464,51 @@
         ],
         "title": "ChartFormat"
       },
+      "ChatAttachmentRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "message_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Message Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "file_format": {
+            "$ref": "#/components/schemas/AttachmentFormat"
+          },
+          "content_type": {
+            "type": "string",
+            "title": "Content Type"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "title": "Size Bytes"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "message_id",
+          "filename",
+          "file_format",
+          "content_type",
+          "size_bytes",
+          "created_at"
+        ],
+        "title": "ChatAttachmentRead"
+      },
       "ChatMessageCreate": {
         "properties": {
           "body": {
@@ -8121,6 +8516,15 @@
             "maxLength": 5000,
             "minLength": 1,
             "title": "Body"
+          },
+          "mention_user_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Mention User Ids"
           }
         },
         "type": "object",
@@ -8153,10 +8557,25 @@
             "type": "string",
             "title": "Body"
           },
+          "mention_user_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Mention User Ids"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "attachments": {
+            "items": {
+              "$ref": "#/components/schemas/ChatAttachmentRead"
+            },
+            "type": "array",
+            "title": "Attachments"
           }
         },
         "type": "object",
@@ -8906,7 +9325,11 @@
           "universities",
           "it_products",
           "interactions",
-          "contacts"
+          "contacts",
+          "vendors",
+          "vendor_contacts",
+          "learners",
+          "applications"
         ],
         "title": "ImportTarget"
       },
@@ -9754,6 +10177,10 @@
           },
           "channel": {
             "type": "string",
+            "enum": [
+              "email",
+              "telegram"
+            ],
             "title": "Channel"
           },
           "status": {
@@ -9862,6 +10289,10 @@
           },
           "channel": {
             "type": "string",
+            "enum": [
+              "email",
+              "telegram"
+            ],
             "title": "Channel"
           }
         },
@@ -9927,6 +10358,10 @@
           },
           "channel": {
             "type": "string",
+            "enum": [
+              "email",
+              "telegram"
+            ],
             "title": "Channel"
           },
           "id": {
@@ -12182,6 +12617,31 @@
             ],
             "title": "Email"
           },
+          "telegram_user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Telegram User Id"
+          },
+          "manager_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager Id"
+          },
           "role": {
             "$ref": "#/components/schemas/UserRole",
             "default": "user"
@@ -12224,6 +12684,29 @@
               }
             ],
             "title": "Email"
+          },
+          "telegram_user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Telegram User Id"
+          },
+          "manager_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager Id"
           },
           "role": {
             "$ref": "#/components/schemas/UserRole"
@@ -12291,6 +12774,38 @@
         ],
         "title": "UserShort",
         "description": "Compact form embedded in other responses."
+      },
+      "UserUpdate": {
+        "properties": {
+          "telegram_user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Telegram User Id"
+          },
+          "manager_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager Id"
+          }
+        },
+        "type": "object",
+        "title": "UserUpdate",
+        "description": "Administrator-editable contact settings for an existing employee."
       },
       "UserVisibilityMode": {
         "type": "string",
