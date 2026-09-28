@@ -1,16 +1,17 @@
-# SMTP and Email Notifications
+# SMTP и уведомления по электронной почте
 
-The application sends email through SMTP from its notification outbox. Delivery
-does not block interaction changes: delivery errors remain in the outbox and
-are retried during the next worker run.
+Приложение отправляет электронные письма через SMTP из очереди уведомлений.
+Доставка не блокирует изменения во взаимодействиях: ошибки доставки остаются
+в очереди и повторяются при следующем запуске обработчика.
 
-## Local Development
+## Локальная разработка
 
-`docker compose up --build` starts Mailpit. It accepts mail only from the
-Compose network, never relays it to the outside world, and displays captured
-mail at http://localhost:8025.
+Команда `docker compose up --build` запускает Mailpit. Он принимает письма
+только из сети Compose, никогда не пересылает их во внешний мир и показывает
+перехваченные письма по адресу http://localhost:8025.
 
-For this scenario, leave these values in `.env` empty or set them explicitly:
+Для этого сценария оставьте следующие значения в `.env` пустыми или задайте их
+явно:
 
 ```dotenv
 SMTP_HOST=mailpit
@@ -20,31 +21,33 @@ SMTP_USE_TLS=false
 SMTP_USE_SSL=false
 ```
 
-When running the API directly on the host rather than in Compose, set
-`SMTP_HOST=127.0.0.1`. Mailpit does not need credentials by default, so
-`SMTP_USERNAME` and `SMTP_PASSWORD` can remain empty.
+Если API запускается непосредственно на хосте, а не в Compose, задайте
+`SMTP_HOST=127.0.0.1`. По умолчанию Mailpit не требует учётных данных, поэтому
+`SMTP_USERNAME` и `SMTP_PASSWORD` можно оставить пустыми.
 
-Enable both notification flags before testing delivery:
+Перед проверкой доставки включите оба флага уведомлений:
 
 ```dotenv
 FEATURE_NOTIFICATIONS_ENABLED=true
 FEATURE_EXTERNAL_CHANNELS_ENABLED=true
 ```
 
-Restart the API, create an email notification rule, and ensure the recipient
-has a working email address. The worker processes the queue every
-`NOTIFICATIONS_POLL_SECONDS` seconds (minimum 10). A manager can also trigger
-immediate processing with `POST /api/v1/notifications/deliver`.
+Перезапустите API, создайте правило уведомлений по электронной почте и
+убедитесь, что у получателя указан действующий адрес. Обработчик проверяет
+очередь каждые `NOTIFICATIONS_POLL_SECONDS` секунд (минимум 10 секунд).
+Менеджер также может запустить немедленную обработку запросом
+`POST /api/v1/notifications/deliver`.
 
-## Server deployment
+## Развёртывание на сервере
 
-`docker-compose.deploy.yml` includes Mailpit as an internal, non-relaying sink.
-Its SMTP port is available only on the Compose network (`mailpit:1025`); only
-the web UI is bound to `127.0.0.1:8025`. This is a safe default for checking
-the notification pipeline, but Mailpit does not deliver messages to real
-recipients.
+`docker-compose.deploy.yml` включает Mailpit как внутренний SMTP-приёмник без
+пересылки писем. SMTP-порт доступен только в сети Compose (`mailpit:1025`), а
+веб-интерфейс привязан только к `127.0.0.1:8025`. Это безопасный вариант для
+проверки конвейера уведомлений, но Mailpit не доставляет письма реальным
+получателям.
 
-Copy `.env.server.example` to `/opt/lct-crm/.env` for this mode and keep:
+Скопируйте `.env.server.example` в `/opt/lct-crm/.env` для этого режима и
+оставьте следующие параметры:
 
 ```dotenv
 SMTP_HOST=mailpit
@@ -56,12 +59,12 @@ SMTP_USE_TLS=false
 SMTP_USE_SSL=false
 ```
 
-To deliver real mail, replace those values with the SMTP relay supplied by
-your mail provider and redeploy the API. Do not set `SMTP_HOST` to
-`localhost` or `127.0.0.1`: the API runs inside Docker, so those addresses
-refer to the API container itself.
+Чтобы отправлять настоящие письма, замените эти значения на параметры SMTP-
+ретранслятора вашего почтового провайдера и повторно разверните API. Не
+указывайте `SMTP_HOST=localhost` или `127.0.0.1`: API работает внутри Docker,
+поэтому эти адреса указывают на сам контейнер API.
 
-For a typical SMTP submission relay using STARTTLS on port 587:
+Для обычного SMTP-ретранслятора с STARTTLS на порту 587:
 
 ```dotenv
 FEATURE_NOTIFICATIONS_ENABLED=true
@@ -75,10 +78,12 @@ SMTP_USE_TLS=true
 SMTP_USE_SSL=false
 ```
 
-For implicit TLS, usually port 465, use `SMTP_USE_TLS=false` and
-`SMTP_USE_SSL=true`. For a trusted internal relay without encryption, set both
-values to `false`. `SMTP_USE_TLS` and `SMTP_USE_SSL` cannot both be enabled;
-the API rejects that invalid configuration at startup.
+Для неявного TLS, обычно на порту 465, используйте
+`SMTP_USE_TLS=false` и `SMTP_USE_SSL=true`. Для доверенного внутреннего
+ретранслятора без шифрования установите оба значения в `false`.
+`SMTP_USE_TLS` и `SMTP_USE_SSL` нельзя включать одновременно: API отклонит
+такую некорректную конфигурацию при запуске.
 
-Do not expose the SMTP port or the Mailpit web interface. Keep `SMTP_PASSWORD`
-only in the server `.env` or a secrets manager, never in Git.
+Не открывайте SMTP-порт или веб-интерфейс Mailpit во внешний доступ.
+Храните `SMTP_PASSWORD` только в серверном `.env` или менеджере секретов,
+никогда не добавляйте его в Git.
