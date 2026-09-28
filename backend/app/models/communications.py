@@ -28,7 +28,7 @@ class NotificationRule(DomainBase):
     recipient_user_id: Mapped[uuid.UUID | None] = mapped_column(
         sa.ForeignKey("users.id", ondelete="RESTRICT"), default=None
     )
-    channel: Mapped[str] = mapped_column(sa.Text, nullable=False)  # email, telegram, max
+    channel: Mapped[str] = mapped_column(sa.Text, nullable=False)  # email, telegram
     is_enabled: Mapped[bool] = mapped_column(
         sa.Boolean, nullable=False, default=True, server_default=sa.true()
     )
@@ -45,9 +45,7 @@ class NotificationRule(DomainBase):
             "recipient_kind IN ('responsible', 'manager', 'role', 'user')",
             name="notification_rule_recipient",
         ),
-        sa.CheckConstraint(
-            "channel IN ('email', 'telegram', 'max')", name="notification_rule_channel"
-        ),
+        sa.CheckConstraint("channel IN ('email', 'telegram')", name="notification_rule_channel"),
         sa.Index("ix_notification_rules_transition", "workflow_transition_id"),
     )
 

@@ -434,7 +434,7 @@ class CommunicationService:
             except Exception as exc:  # pragma: no cover - external Telegram failure
                 return False, f"Ошибка Telegram: {exc}"
             return True, None
-        return False, "Канал MAX пока не подключён"
+        return False, f"Неподдерживаемый канал уведомлений: {row.channel}"
 
     async def deliveries(self, limit: int = 20) -> list[NotificationDelivery]:
         """Recent delivery attempts for the notification center."""

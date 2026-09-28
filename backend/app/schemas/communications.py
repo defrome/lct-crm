@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 import uuid
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -16,7 +17,7 @@ class NotificationRuleCreate(BaseModel):
     recipient_kind: str
     recipient_role: str | None = None
     recipient_user_id: uuid.UUID | None = None
-    channel: str
+    channel: Literal["email", "telegram"]
 
 
 class NotificationRuleRead(NotificationRuleCreate, ORMModel):
@@ -28,7 +29,7 @@ class NotificationDeliveryRead(ORMModel):
     id: uuid.UUID
     interaction_id: uuid.UUID
     recipient_user_id: uuid.UUID | None
-    channel: str
+    channel: Literal["email", "telegram"]
     status: str
     attempts: int
     error_message: str | None

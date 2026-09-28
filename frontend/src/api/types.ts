@@ -317,7 +317,7 @@ export interface InteractionQuery extends PageQuery {
 
 // --- РљРѕРјРјСѓРЅРёРєР°С†РёРё ---------------------------------------------------------
 
-export type NotificationChannel = 'email' | 'telegram' | 'max';
+export type NotificationChannel = 'email' | 'telegram';
 export type NotificationStatus = 'queued' | 'sent' | 'failed';
 export type NotificationRecipient = 'responsible' | 'manager' | 'role' | 'user';
 

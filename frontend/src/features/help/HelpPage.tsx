@@ -267,7 +267,7 @@ export function AdminGuide() {
           <li>CACHE_ENABLED + FEATURE_CACHE_ENABLED — Redis-кэш каталогов.</li>
           <li>FEATURE_CHAT_ENABLED — чат карточки и вложения сообщений.</li>
           <li>FEATURE_NOTIFICATIONS_ENABLED — worker уведомлений.</li>
-          <li>FEATURE_EXTERNAL_CHANNELS_ENABLED — email / Telegram / MAX.</li>
+          <li>FEATURE_EXTERNAL_CHANNELS_ENABLED — email / Telegram.</li>
         </ul>
         <p className="mt-3 text-desc text-fg-muted">Все необязательные возможности выключены по умолчанию; изменение флага не меняет уже сохранённые данные.</p>
       </GuideCard>

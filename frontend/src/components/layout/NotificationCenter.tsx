@@ -14,7 +14,7 @@ import { useDismiss } from '@/hooks';
 import { formatDateTime } from '@/lib/format';
 
 const STATUS_LABELS = { queued: 'В очереди', failed: 'Ошибка', sent: 'Отправлено' } as const;
-const CHANNEL_LABELS = { email: 'Email', telegram: 'Telegram', max: 'MAX' } as const;
+const CHANNEL_LABELS = { email: 'Email', telegram: 'Telegram' } as const;
 
 export function NotificationCenter() {
   const { can } = useAuth();

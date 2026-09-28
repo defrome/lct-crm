@@ -8391,7 +8391,7 @@
           "files": {
             "items": {
               "type": "string",
-              "contentMediaType": "application/octet-stream"
+              "format": "binary"
             },
             "type": "array",
             "title": "Files",
@@ -8413,7 +8413,7 @@
         "properties": {
           "file": {
             "type": "string",
-            "contentMediaType": "application/octet-stream",
+            "format": "binary",
             "title": "File",
             "description": "Файл одного из десяти допустимых форматов"
           },
@@ -8440,7 +8440,7 @@
         "properties": {
           "file": {
             "type": "string",
-            "contentMediaType": "application/octet-stream",
+            "format": "binary",
             "title": "File",
             "description": "Файл каталога .xlsx, .xls или .json"
           },
@@ -12861,13 +12861,6 @@
           "type": {
             "type": "string",
             "title": "Error Type"
-          },
-          "input": {
-            "title": "Input"
-          },
-          "ctx": {
-            "type": "object",
-            "title": "Context"
           }
         },
         "type": "object",

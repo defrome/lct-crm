@@ -244,7 +244,7 @@ export const FIELD_LABELS: Record<string, string> = {
 };
 
 const AUDIT_VALUE_LABELS: Record<string, Record<string, string>> = {
-  channel: { email: 'Email', telegram: 'Telegram', max: 'MAX' },
+  channel: { email: 'Email', telegram: 'Telegram' },
   recipient_kind: {
     responsible: 'Ответственный',
     manager: 'Руководители',
