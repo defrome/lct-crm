@@ -66,7 +66,7 @@ export function DashboardPage() {
   }
 
   const loading = all.isPending || stages.isLoading;
-  const firstName = user ? (user.full_name.split(/\s+/)[1] ?? user.full_name) : '';
+  const firstName = user ? (user.full_name.split(/\s+/)[0] ?? user.full_name) : '';
   const peak = stageData.reduce<Datum | null>(
     (best, datum) => (!best || datum.value > best.value ? datum : best),
     null,
