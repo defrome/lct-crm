@@ -47,6 +47,7 @@ from app.models.enums import (
     ImportJobStatus,
     ImportRowStatus,
     ImportTarget,
+    UserRole,
 )
 from app.models.import_job import ImportJob, ImportMappingPreset, ImportRow
 from app.models.learner import Learner, TrainingApplication
@@ -67,6 +68,7 @@ from app.services.catalogs import (
     VendorService,
 )
 from app.services.interactions import InteractionService
+from app.services.keycloak_admin import KeycloakAdminClient
 from app.services.object_storage import ObjectStorage, get_object_storage
 from app.services.text import clean_text, normalize_name, normalize_person_name, split_multi_value
 from app.services.users import UserService
@@ -118,6 +120,7 @@ class ImportService:
         self.contacts = UniversityContactService(session, self.scope)
         self.interactions = InteractionService(session, self.scope)
         self.users = UserService(session, self.scope)
+        self.keycloak = KeycloakAdminClient()
         self.storage = storage or get_object_storage()
 
     # -- step 1: upload -----------------------------------------------------
@@ -1005,7 +1008,61 @@ class ImportService:
             if key not in {"last_name", "first_name"} and data.get(key) is not None:
                 setattr(learner, key, _as_date(data[key]) if key.endswith("date") else data[key])
         await self.session.flush()
+        await self._upsert_imported_user(data)
         return learner.id, created
+
+    async def _upsert_imported_user(self, data: dict[str, Any]) -> User:
+        """Create the Keycloak-backed user projection for an imported person."""
+        full_name = " ".join(
+            part
+            for part in (data.get("last_name"), data.get("first_name"), data.get("middle_name"))
+            if part
+        )
+        normalized_name = normalize_person_name(full_name)
+        email = data.get("email")
+
+        existing: User | None = None
+        if email:
+            existing = await self.session.scalar(
+                select(User).where(User.email == email, User.deleted_at.is_(None))
+            )
+        if existing is None and normalized_name:
+            candidates = list(
+                (
+                    await self.session.scalars(
+                        select(User).where(
+                            User.full_name_normalized == normalized_name,
+                            User.deleted_at.is_(None),
+                        )
+                    )
+                ).all()
+            )
+            if len(candidates) == 1:
+                existing = candidates[0]
+
+        if existing is None:
+            username = email or f"imported-{uuid.uuid4()}"
+            keycloak_id = await self.keycloak.ensure_user(
+                username=username,
+                email=email,
+                first_name=data["first_name"],
+                last_name=data["last_name"],
+            )
+            existing = User(
+                keycloak_id=keycloak_id,
+                full_name=full_name,
+                full_name_normalized=normalized_name,
+                email=email,
+                role=UserRole.USER,
+            )
+            self.session.add(existing)
+        else:
+            existing.full_name = full_name
+            existing.full_name_normalized = normalized_name
+            if email:
+                existing.email = email
+        await self.session.flush()
+        return existing
 
     async def _commit_application_row(self, row: ImportRow) -> tuple[uuid.UUID, bool]:
         data = row.parsed_data

@@ -104,7 +104,7 @@ export const IMPORT_TARGET_LABELS: Record<ImportTarget, string> = {
   contacts: 'Контакты вузов',
   vendors: 'Вендоры',
   vendor_contacts: 'Контакты вендоров',
-  learners: 'Слушатели',
+  learners: 'Пользователи',
   applications: 'Заявки на обучение',
 };
 

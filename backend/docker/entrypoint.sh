@@ -58,6 +58,13 @@ fi
 echo "applying migrations..."
 alembic upgrade head
 
+# The base workflow is required in every environment, including production
+# where demo seeding is intentionally disabled. The command is idempotent and
+# therefore also repairs an existing database that was created before this
+# startup step was introduced.
+echo "ensuring base workflow..."
+python -m scripts.ensure_base_workflow
+
 if [ "${SEED_ON_START:-false}" = "true" ]; then
     echo "seeding demo data..."
     python -m scripts.seed

@@ -130,6 +130,11 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-crm}
       POSTGRES_DB: ${POSTGRES_DB:-crm}
       SEED_ON_START: ${SEED_ON_START:-false}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:-crm-production}
+      KEYCLOAK_ADMIN_URL: http://keycloak:8080
+      KEYCLOAK_ADMIN_REALM: master
+      KEYCLOAK_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD is required}
       # Derived from the same public URL as KC_HOSTNAME so token issuer and API
       # validation target cannot drift apart.
       KEYCLOAK_ISSUER: https://${DOMAIN:?DOMAIN is required}/kc/realms/${KEYCLOAK_REALM:-crm-production}

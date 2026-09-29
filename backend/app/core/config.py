@@ -58,9 +58,14 @@ class Settings(BaseSettings):
 
     # --- Auth --------------------------------------------------------------
     auth_mode: AuthMode = "dev"
+    keycloak_realm: str = "crm"
     keycloak_issuer: str | None = None
     keycloak_audience: str | None = None
     keycloak_jwks_url: str | None = None
+    keycloak_admin_url: str = "http://keycloak:8080"
+    keycloak_admin_realm: str = "master"
+    keycloak_admin_username: str | None = None
+    keycloak_admin_password: str | None = None
 
     # --- Imports -----------------------------------------------------------
     import_max_file_size: int = 20 * 1024 * 1024  # 20 MiB, per SPEC §6
