@@ -111,6 +111,21 @@ class WorkflowVersionRepository(BaseRepository[WorkflowVersion]):
         )
         return int(total or 0)
 
+    async def count_cards_on_workflow(self, workflow_id: uuid.UUID) -> int:
+        """Count all live cards started on any version of a workflow."""
+        from app.models.interaction import Interaction
+
+        total = await self.session.scalar(
+            sa.select(sa.func.count())
+            .select_from(Interaction)
+            .join(WorkflowVersion, Interaction.workflow_version_id == WorkflowVersion.id)
+            .where(
+                WorkflowVersion.workflow_id == workflow_id,
+                Interaction.deleted_at.is_(None),
+            )
+        )
+        return int(total or 0)
+
     async def active_cards_on_version(self, version_id: uuid.UUID) -> list[Any]:
         """Cards on non-terminal stages are the only cards eligible for migration."""
         from app.models.interaction import Interaction

@@ -132,15 +132,21 @@ class WorkflowService:
 
     async def delete(self, workflow_id: uuid.UUID) -> None:
         workflow = await self.repo.get_or_fail(workflow_id)
-        published = await self.versions.find_published(workflow_id)
-        if published is not None:
-            cards = await self.versions.count_cards_on_version(published.id)
-            if cards:
-                raise ValidationError(
-                    f"Нельзя удалить workflow: по нему идут карточки ({cards}). "
-                    "Сначала переведите их на другой workflow.",
-                    details={"blocked_by": {"карточки": cards}},
-                )
+        if workflow.is_default:
+            raise ValidationError(
+                "Нельзя удалить маршрут по умолчанию. "
+                "Сначала назначьте другой маршрут по умолчанию.",
+                details={"blocked_by": {"default_workflow": 1}},
+            )
+
+        cards = await self.versions.count_cards_on_workflow(workflow_id)
+        if cards:
+            raise ValidationError(
+                f"Нельзя удалить маршрут: к нему привязаны взаимодействия ({cards}). "
+                "Сначала переведите их на другой маршрут.",
+                details={"blocked_by": {"взаимодействия": cards}},
+            )
+
         await self.repo.soft_delete(workflow)
         await self.session.commit()
 

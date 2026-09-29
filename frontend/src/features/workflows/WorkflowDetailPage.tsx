@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
 import { stagesApi, transitionsApi, workflowsApi } from '@/api/endpoints';
 import { useWorkflow, useWorkflowGraph, useWorkflowVersions } from '@/api/queries';
@@ -31,6 +31,7 @@ const VERSION_LABEL: Record<string, string> = {
 
 export function WorkflowDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { can } = useAuth();
   const toast = useToast();
   const client = useQueryClient();
@@ -50,6 +51,7 @@ export function WorkflowDetailPage() {
   const [editing, setEditing] = useState(false);
   const [addingStage, setAddingStage] = useState(false);
   const [addingTransition, setAddingTransition] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const isDraft = version?.status === 'draft';
   const editable = isDraft && can('manager');
@@ -62,6 +64,16 @@ export function WorkflowDetailPage() {
       toast.notify('Черновик создан', `Версия ${created.version} — копия текущей`);
     },
     onError: (error) => toast.fail(error, 'Не удалось создать черновик'),
+  });
+
+  const remove = useMutation({
+    mutationFn: () => workflowsApi.remove(id!),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['workflows'] });
+      toast.notify('Маршрут удалён');
+      navigate('/workflows');
+    },
+    onError: (error) => toast.fail(error, 'Не удалось удалить маршрут'),
   });
 
   const [publishing, setPublishing] = useState(false);
@@ -111,6 +123,11 @@ export function WorkflowDetailPage() {
                   onClick={() => createDraft.mutate()}
                 >
                   Изменить маршрут
+                </Button>
+              )}
+              {workflow.data && can('admin') && !workflow.data.is_default && (
+                <Button variant="danger" icon="trash" onClick={() => setDeleting(true)}>
+                  Удалить
                 </Button>
               )}
             </>
@@ -212,6 +229,17 @@ export function WorkflowDetailPage() {
           record={workflow.data}
         />
       )}
+
+      <ConfirmModal
+        open={deleting}
+        onClose={() => setDeleting(false)}
+        onConfirm={() => remove.mutate()}
+        loading={remove.isPending}
+        danger
+        title="Удалить маршрут?"
+        confirmLabel="Удалить"
+        message="Маршрут будет помечен удалённым. Удаление доступно, только если он не назначен по умолчанию и к нему не привязаны взаимодействия."
+      />
 
       {version && (
         <>

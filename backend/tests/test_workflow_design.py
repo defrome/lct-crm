@@ -6,10 +6,15 @@ import pytest
 
 from app.core.errors import (
     DuplicateEntityError,
+    NotFoundError,
     ValidationError,
     WorkflowVersionLockedError,
 )
 from app.models.enums import WorkflowVersionStatus
+from app.schemas.interaction import InteractionCreate
+from app.schemas.university import UniversityCreate
+from app.services.catalogs import UniversityService
+from app.services.interactions import InteractionService
 from app.services.workflow import WorkflowService
 from app.services.workflow_presets import BASE_WORKFLOW_STAGES, ensure_base_workflow
 
@@ -180,6 +185,46 @@ async def test_duplicate_workflow_name_is_refused(session, scope):
     await service.create(name="Процесс")
     with pytest.raises(DuplicateEntityError):
         await service.create(name="процесс")
+
+
+async def test_default_workflow_cannot_be_deleted(session, scope):
+    service = WorkflowService(session, scope)
+    workflow = await service.create(name="Маршрут по умолчанию", is_default=True)
+
+    with pytest.raises(ValidationError, match="по умолчанию"):
+        await service.delete(workflow.id)
+
+
+async def test_workflow_with_interaction_on_archived_version_cannot_be_deleted(session, scope):
+    service = WorkflowService(session, scope)
+    workflow = await service.create(name="Маршрут с взаимодействием")
+    first = await service.create_draft(workflow.id)
+    initial = await service.add_stage(first.id, name="Старт", is_initial=True)
+    await service.publish(first.id)
+
+    second = await service.create_draft(workflow.id, clone_from_id=first.id)
+    await service.publish(second.id)
+
+    university = await UniversityService(session, scope).create(UniversityCreate(name="Вуз"))
+    interaction = await InteractionService(session, scope).create(
+        InteractionCreate(university_id=university.id)
+    )
+    interaction.workflow_version_id = first.id
+    interaction.current_stage_id = initial.id
+    await session.commit()
+
+    with pytest.raises(ValidationError, match="взаимодействия"):
+        await service.delete(workflow.id)
+
+
+async def test_non_default_workflow_without_interactions_can_be_deleted(session, scope):
+    service = WorkflowService(session, scope)
+    workflow = await service.create(name="Удаляемый маршрут")
+
+    await service.delete(workflow.id)
+
+    with pytest.raises(NotFoundError):
+        await service.get(workflow.id)
 
 
 async def test_graph_returns_stages_transitions_and_counts(session, scope):
