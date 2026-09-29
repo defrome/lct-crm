@@ -75,7 +75,6 @@ backend/     FastAPI, SQLAlchemy, Alembic, PostgreSQL — API и бизнес-л
 frontend/    React, TypeScript, Vite — интерфейс CRM
 docker/      Keycloak, Caddy, Prometheus, Grafana и служебные файлы
 docs/        архитектура, интеграции, эксплуатация, руководства и OpenAPI
-archive/     примеры исходных файлов и данных для импорта
 .github/     CI/CD: проверки, образы, публикация и деплой
 ```
 
